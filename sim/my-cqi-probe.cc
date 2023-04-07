@@ -1,3 +1,4 @@
+/* Include ns3 libraries */
 #include "ns3/applications-module.h"
 #include "ns3/config-store.h"
 #include "ns3/core-module.h"
@@ -16,200 +17,22 @@
 #include <ns3/buildings-module.h>
 #include <ns3/hybrid-buildings-propagation-loss-model.h>
 
+/* Include systems libraries */
 #include <sys/types.h>
 #include <unistd.h>
 
+/* Include custom libraries (aux files for the simulation) */
+#include "cmdline-colors.h"
+#include "cqiprobe-apps.h"
+
 using namespace ns3;
+
 NS_LOG_COMPONENT_DEFINE ("MyCode");
-
-// Set text colors
-std::string clear = "\033[0m" ;
-std::string red = "\033[0;31m" ;
-std::string green = "\033[0;32m" ;
-std::string yellow = "\033[0;33m" ;
-std::string blue = "\033[0;34m" ;
-std::string magenta = "\033[0;35m" ;
-std::string cyan = "\033[0;36m" ;
-
 
 auto tic = std::chrono::high_resolution_clock::now();
 auto itime = std::chrono::high_resolution_clock::now();
 static double SegmentSize = 1448.0;
 double simTime = 10;           // in second
-
-class MyAppTag : public Tag
-{
-public:
-  MyAppTag ()
-  {
-  }
-
-  MyAppTag (Time sendTs) : m_sendTs (sendTs)
-  {
-  }
-
-  static TypeId GetTypeId (void)
-  {
-    static TypeId tid = TypeId ("ns3::MyAppTag")
-      .SetParent<Tag> ()
-      .AddConstructor<MyAppTag> ();
-    return tid;
-  }
-
-  virtual TypeId  GetInstanceTypeId (void) const
-  {
-    return GetTypeId ();
-  }
-
-  virtual void  Serialize (TagBuffer i) const
-  {
-    i.WriteU64 (m_sendTs.GetNanoSeconds ());
-  }
-
-  virtual void  Deserialize (TagBuffer i)
-  {
-    m_sendTs = NanoSeconds (i.ReadU64 ());
-  }
-
-  virtual uint32_t  GetSerializedSize () const
-  {
-    return sizeof (m_sendTs);
-  }
-
-  virtual void Print (std::ostream &os) const
-  {
-    std::cout << m_sendTs;
-  }
-
-  Time m_sendTs;
-};
-
-
-class MyApp : public Application
-{
-public:
-  MyApp ();
-  virtual ~MyApp ();
-  void ChangeDataRate (DataRate rate);
-  void Setup (Ptr<Socket> socket, Address address, uint32_t packetSize, uint32_t nPackets, DataRate dataRate);
-
-
-
-private:
-  virtual void StartApplication (void);
-  virtual void StopApplication (void);
-
-  void ScheduleTx (void);
-  void SendPacket (void);
-
-  Ptr<Socket>     m_socket;
-  Address         m_peer;
-  uint32_t        m_packetSize;
-  uint32_t        m_nPackets;
-  DataRate        m_dataRate;
-  EventId         m_sendEvent;
-  bool            m_running;
-  uint32_t        m_packetsSent;
-};
-
-MyApp::MyApp ()
-  : m_socket (0),
-    m_peer (),
-    m_packetSize (0),
-    m_nPackets (0),
-    m_dataRate (0),
-    m_sendEvent (),
-    m_running (false),
-    m_packetsSent (0)
-{
-}
-
-MyApp::~MyApp ()
-{
-  m_socket = 0;
-}
-
-void
-MyApp::Setup (Ptr<Socket> socket, Address address, uint32_t packetSize, uint32_t nPackets, DataRate dataRate)
-{
-  m_socket = socket;
-  m_peer = address;
-  m_packetSize = packetSize;
-  m_nPackets = nPackets;
-  m_dataRate = dataRate;
-}
-
-void
-MyApp::ChangeDataRate (DataRate rate)
-{
-  m_dataRate = rate;
-}
-
-void
-MyApp::StartApplication (void)
-{
-  m_running = true;
-  m_packetsSent = 0;
-  m_socket->Bind ();
-  m_socket->Connect (m_peer);
-  SendPacket ();
-}
-
-void
-MyApp::StopApplication (void)
-{
-  m_running = false;
-
-  if (m_sendEvent.IsRunning ())
-    {
-    //   std::cout  <<  red << "CANCEL SOCKET" << clear << std::endl;
-      Simulator::Cancel (m_sendEvent);
-    }
-
-  if (m_socket)
-    {
-    //   std::cout  <<  red << "CLOSE SOCKET" << clear << std::endl;
-      m_socket->Close ();
-    }
-}
-
-void
-MyApp::SendPacket (void)
-{
-    Ptr<Packet> packet = Create<Packet> (m_packetSize);
-    MyAppTag tag (Simulator::Now ());
-
-
-    m_socket->Send (packet);
-    if (++m_packetsSent < m_nPackets)
-    {
-        ScheduleTx ();
-    }
-    else
-    {
-        std::cout  <<  red << "APP END" << clear << std::endl;
-
-    }
-}
-
-
-
-void
-MyApp::ScheduleTx (void)
-{
-  if (m_running)
-    {
-      Time tNext (Seconds (m_packetSize * 8 / static_cast<double> (m_dataRate.GetBitRate ())));
-      m_sendEvent = Simulator::Schedule (tNext, &MyApp::SendPacket, this);
-    }
-    else
-    {
-        std::cout  <<  red << "APP STOPPED" << clear << std::endl;
-
-    }
-}
-
-
 
 // Trace congestion window
 static void
@@ -991,4 +814,4 @@ main(int argc, char* argv[])
     std::cout << "Total Time: " << "\033[1;35m"  << 1.e-9*std::chrono::duration_cast<std::chrono::nanoseconds>(toc-itime).count() << "\033[0m"<<  std::endl;
 
     return 0;
-}
+};
