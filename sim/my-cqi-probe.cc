@@ -31,7 +31,7 @@ NS_LOG_COMPONENT_DEFINE ("MyCode");
 
 auto tic = std::chrono::high_resolution_clock::now();
 auto itime = std::chrono::high_resolution_clock::now();
-static double SegmentSize = 1448.0;
+static double SegmentSize = 1448.0; // Máxima cantidad de bits que puede tener un paquete
 double simTime = 10;           // in second
 
 // Trace congestion window
@@ -114,7 +114,17 @@ SsThreshTracer(Ptr<OutputStreamWrapper> stream, uint32_t oldval, uint32_t newval
     *stream->GetStream()  << Simulator::Now().GetSeconds() << "\t" << oldval<< "\t" << newval << std::endl;
 }
 
-
+/*
+* Función para imprimir en pantalla info del nodo y el socket, luego guarda en archivos txt info pertinente a TCP L4.
+* Guarda:
+*   - CWND
+*   - RTO
+*   - RTT
+*   - NextTxSequence
+*   - NextRxSequence
+*   - BytesInFlight
+*   - SS Threshold
+*/
 static void
 TraceTcp(uint32_t nodeId, uint32_t socketId)
 {
@@ -195,6 +205,7 @@ TraceTcp(uint32_t nodeId, uint32_t socketId)
                                     MakeBoundCallback(&SsThreshTracer,ssthStream));
 
 }
+
 static void InstallTCP2 (Ptr<Node> remoteHost,
                         Ptr<Node> sender,
                         uint16_t sinkPort,
@@ -227,6 +238,7 @@ static void InstallTCP2 (Ptr<Node> remoteHost,
 
 /**
  * Calulate the Position
+ * Imprime info en la consola
  */
 
 static void
@@ -263,11 +275,10 @@ CalculatePosition(NodeContainer* ueNodes, NodeContainer* gnbNodes, std::ostream*
 
 
 
-
-
 int
-main(int argc, char* argv[])
-{
+main(int argc, char* argv[]) {
+#pragma region Variables
+
     double frequency = 27.3e9;      // central frequency 28e9
     double bandwidth = 100e6;     // bandwidth
     double mobility = true;      // whether to enable mobility default: false
@@ -286,8 +297,9 @@ main(int argc, char* argv[])
     double dataRate = 100; //Mbps
     double serverDelay = 0.01; // remote 0.040 ; edge 0.004
     double rlcBufferPerc = 100; // x*DBP
-    double rlcBuffer = round(dataRate*1e6/8*serverDelay*rlcBufferPerc/100); // Bytes BDP=250Mbps*100ms default: 999999999
+    double rlcBuffer;  // Se calcula más abajo, según serverType
 
+    // CQI Probe own variables.
     double cqiHighGain = 2; // Step of CQI probe
     double ProbeCqiDuration = 200; // milisecond
     double cqiGainCycle[] = {5.0 / 4, 3.0 / 4 , 1, 1, 1, 1, 1, 1}; // Similar a BBR
@@ -295,6 +307,7 @@ main(int argc, char* argv[])
     bool NRTrace = true; // whether to enable Trace NR
     bool TCPTrace = true; // whether to enable Trace TCP
 
+    // RB   Position
     uint16_t gNbNum = 1; // Numbers of RB
     double gNbX = 50.0;
     double gNbY = 50.0;
@@ -306,7 +319,7 @@ main(int argc, char* argv[])
     double xUE=30; //Initial Position UE
     double yUE=10; //Initial Position UE
 
-
+    // BUILDING Position
     bool enableBuildings = true; // 
     uint32_t gridWidth = 3 ;//
     uint32_t numOfBuildings = 2;
@@ -325,6 +338,10 @@ main(int argc, char* argv[])
     std::string tcpTypeId = "TcpBbr";
     double AppStartTime = 0.2; // APP start time
 
+#pragma endregion Variables
+
+    // Simulation arguments
+#pragma region SimArguments
 
     CommandLine cmd(__FILE__);
     cmd.AddValue("frequency", "The central carrier frequency in Hz.", frequency);
@@ -344,6 +361,7 @@ main(int argc, char* argv[])
     cmd.AddValue("cqiHighGain", "Steps of CQI Probe. Means CQI=round(CQI*cqiHighGain)", cqiHighGain);
 
     cmd.Parse(argc, argv);
+#pragma endregion SimArguments
 
     if (serverType == "Remote")
     {
@@ -356,15 +374,17 @@ main(int argc, char* argv[])
     rlcBuffer = round(dataRate*1e6/8*serverDelay*rlcBufferPerc/100); // Bytes BDP=250Mbps*100ms default: 999999999
 
     // Radio Config
+
+    /* Already defined:
     Config::SetDefault ("ns3::ThreeGppChannelModel::UpdatePeriod", TimeValue (MilliSeconds (0)));
 
     std::string errorModel = "ns3::NrEesmIrT1"; //ns3::NrEesmCcT1, ns3::NrEesmCcT2, ns3::NrEesmIrT1, ns3::NrEesmIrT2, ns3::NrLteMiErrorModel
     Config::SetDefault("ns3::NrAmc::ErrorModelType", TypeIdValue(TypeId::LookupByName(errorModel)));
     Config::SetDefault("ns3::NrAmc::AmcModel", EnumValue(NrAmc::ErrorModel )); // NrAmc::ShannonModel // NrAmc::ErrorModel
-
+    */
 
     // TCP config
-    // TCP Settig
+    // TCP Setting
     // attibutes in: https://www.nsnam.org/docs/release/3.27/doxygen/classns3_1_1_tcp_socket.html
     uint32_t delAckCount = 1;
     std::string queueDisc = "FifoQueueDisc";
@@ -428,53 +448,6 @@ main(int argc, char* argv[])
     }
 
     // 
-    // generate graph.ini
-    //
-    std::string iniFile="graph.ini";
-    std::ofstream inif;
-    inif.open(iniFile);
-    inif << "[general]" << std::endl;
-    inif << "resamplePeriod = 100" << std::endl;
-    inif << "simTime = " << simTime << std::endl;
-    inif << "AppStartTime = " << AppStartTime << std::endl;
-    inif << "NRTrace = " << NRTrace << std::endl;
-    inif << "TCPTrace = " << TCPTrace << std::endl;
-    inif << "flowType = " << flowType << std::endl;
-    inif << "tcpTypeId = " << tcpTypeId << std::endl;
-    inif << "frequency = " << frequency << std::endl;
-    inif << "bandwidth = " << bandwidth << std::endl;
-    inif << "serverID = " << (int)(ueNumPergNb+gNbNum+3) << std::endl;
-    inif << "UENum = " << (int)(ueNumPergNb) << std::endl;
-    inif << "SegmentSize = " << SegmentSize << std::endl;
-    inif << "rlcBuffer = " << rlcBuffer << std::endl;
-    inif << "rlcBufferPerc = " << rlcBufferPerc << std::endl;
-    inif << "serverType = " << serverType << std::endl;
-    inif << "dataRate = " << dataRate << std::endl;
-    inif << "cqiHighGain = " << cqiHighGain << std::endl;
-    inif << "ProbeCqiDuration = " << ProbeCqiDuration << std::endl;
-    
-
-    inif << std::endl;
-    inif << "[gNb]" << std::endl;
-    inif << "gNbNum = " << gNbNum << std::endl;
-    inif << "gNbX = "   << gNbX   << std::endl;
-    inif << "gNbY = "   << gNbY   << std::endl;
-    inif << "gNbD = "   << gNbD   << std::endl;
-
-    inif << std::endl;
-    inif << "[building]" << std::endl;
-    inif << "enableBuildings = " << enableBuildings << std::endl;
-    inif << "gridWidth = " << gridWidth << std::endl;
-    inif << "buildN = " << numOfBuildings << std::endl;
-    inif << "buildX = " << buildX << std::endl;
-    inif << "buildY = " << buildY << std::endl;
-    inif << "buildDx = " << buildDx << std::endl;
-    inif << "buildDy = " << buildDy << std::endl;
-    inif << "buildLx = " << buildLx << std::endl;
-    inif << "buildLy = " << buildLy << std::endl;
-    inif.close();
-
-    // 
     /*
      * Default values for the simulation. We are progressively removing all
      * the instances of SetDefault, but we need it for legacy code (LTE)
@@ -502,8 +475,14 @@ main(int argc, char* argv[])
         NS_ABORT_MSG("Scenario not supported. Choose among 'RMa', 'UMa', 'UMi-StreetCanyon', "
                      "'InH-OfficeMixed', and 'InH-OfficeOpen'.");
     }
+    
 
-    // create base stations and mobile terminals
+    /******************************************************************************************************************************************
+    * Create base stations and mobile terminal
+    * Define positions, mobility types and speed of UE and gNB.
+    *******************************************************************************************************************************************/
+#pragma region UE_gNB
+
     NodeContainer gnbNodes;
     NodeContainer ueNodes;
     gnbNodes.Create(gNbNum);
@@ -539,8 +518,11 @@ main(int argc, char* argv[])
         ueNodes.Get(u)->GetObject<MobilityModel>()->SetPosition(Vector((float)xUE, (float) yUE +(float)ueDistance*u, hUE)); // (x, y, z) in m
         ueNodes.Get(u)->GetObject<ConstantVelocityMobilityModel>()->SetVelocity(Vector( speed, 0,  0)); // move UE1 along the x axis
     }
+#pragma endregion UE_gNB
 
-    // Building
+    /************************************************************************************************************************************************
+     * Create and install buildings
+     *************************************************************************************************************************************************/
     if (enableBuildings)
     {
         std::cout << cyan << "Installing Building" << clear << std::endl;
@@ -577,7 +559,10 @@ main(int argc, char* argv[])
 
     }
 
-
+    /************************************************************************************************************************************************
+     * NR Stuff
+     *************************************************************************************************************************************************/
+#pragma region NR_Config
     /*
      * Create NR simulation helpers
      */
@@ -587,7 +572,7 @@ main(int argc, char* argv[])
     Ptr<NrHelper> nrHelper = CreateObject<NrHelper>();
     nrHelper->SetBeamformingHelper(idealBeamformingHelper);
     nrHelper->SetEpcHelper(epcHelper);
-
+    
     /*
      * Spectrum configuration. We create a single operational band and configure the scenario.
      */
@@ -614,10 +599,12 @@ main(int argc, char* argv[])
      // Initialize channel and pathloss, plus other things inside band.
      
     Config::SetDefault("ns3::ThreeGppChannelModel::UpdatePeriod", TimeValue(MilliSeconds(0)));
+    std::string errorModel = "ns3::NrEesmIrT1"; //ns3::NrEesmCcT1, ns3::NrEesmCcT2, ns3::NrEesmIrT1, ns3::NrEesmIrT2, ns3::NrLteMiErrorModel
+    Config::SetDefault("ns3::NrAmc::ErrorModelType", TypeIdValue(TypeId::LookupByName(errorModel)));
+    Config::SetDefault("ns3::NrAmc::AmcModel", EnumValue(NrAmc::ErrorModel )); // NrAmc::ShannonModel // NrAmc::ErrorModel
     //we need activate? : "ns3::BuildingsChannelConditionModel"
 
     std::string pathlossModel="ns3::ThreeGppUmaPropagationLossModel";
-
 
     nrHelper->SetChannelConditionModelAttribute("UpdatePeriod", TimeValue(MilliSeconds(0)));
     nrHelper->SetPathlossAttribute("ShadowingEnabled", BooleanValue(shadowing)); // false: allow see effect of path loss only
@@ -680,6 +667,7 @@ main(int argc, char* argv[])
     {
         DynamicCast<NrUeNetDevice>(*it)->UpdateConfig();
     }
+#pragma endregion NR_Config
 
     // create the internet and install the IP stack on the UEs
     // get SGW/PGW and create a single RemoteHost
@@ -781,6 +769,10 @@ main(int argc, char* argv[])
         }
     }
 
+    /****************************************************************************************************************************
+     * Trace and file generation
+     ****************************************************************************************************************************/
+#pragma region trace_n_files
     // enable the traces provided by the nr module
     if (NRTrace)
     {
@@ -804,6 +796,54 @@ main(int argc, char* argv[])
     mymcf  << "Time\t" << "UE\t" << "x\t" << "y\t"  << "D0" << std::endl;
     Simulator::Schedule(MilliSeconds(100), &CalculatePosition, &ueNodes, &gnbNodes, &mymcf);
 
+    // 
+    // generate graph.ini
+    //
+    std::string iniFile="graph.ini";
+    std::ofstream inif;
+    inif.open(iniFile);
+    inif << "[general]" << std::endl;
+    inif << "resamplePeriod = 100" << std::endl;
+    inif << "simTime = " << simTime << std::endl;
+    inif << "AppStartTime = " << AppStartTime << std::endl;
+    inif << "NRTrace = " << NRTrace << std::endl;
+    inif << "TCPTrace = " << TCPTrace << std::endl;
+    inif << "flowType = " << flowType << std::endl;
+    inif << "tcpTypeId = " << tcpTypeId << std::endl;
+    inif << "frequency = " << frequency << std::endl;
+    inif << "bandwidth = " << bandwidth << std::endl;
+    inif << "serverID = " << (int)(ueNumPergNb+gNbNum+3) << std::endl;
+    inif << "UENum = " << (int)(ueNumPergNb) << std::endl;
+    inif << "SegmentSize = " << SegmentSize << std::endl;
+    inif << "rlcBuffer = " << rlcBuffer << std::endl;
+    inif << "rlcBufferPerc = " << rlcBufferPerc << std::endl;
+    inif << "serverType = " << serverType << std::endl;
+    inif << "dataRate = " << dataRate << std::endl;
+    inif << "cqiHighGain = " << cqiHighGain << std::endl;
+    inif << "ProbeCqiDuration = " << ProbeCqiDuration << std::endl;
+    
+
+    inif << std::endl;
+    inif << "[gNb]" << std::endl;
+    inif << "gNbNum = " << gNbNum << std::endl;
+    inif << "gNbX = "   << gNbX   << std::endl;
+    inif << "gNbY = "   << gNbY   << std::endl;
+    inif << "gNbD = "   << gNbD   << std::endl;
+
+    inif << std::endl;
+    inif << "[building]" << std::endl;
+    inif << "enableBuildings = " << enableBuildings << std::endl;
+    inif << "gridWidth = " << gridWidth << std::endl;
+    inif << "buildN = " << numOfBuildings << std::endl;
+    inif << "buildX = " << buildX << std::endl;
+    inif << "buildY = " << buildY << std::endl;
+    inif << "buildDx = " << buildDx << std::endl;
+    inif << "buildDy = " << buildDy << std::endl;
+    inif << "buildLx = " << buildLx << std::endl;
+    inif << "buildLy = " << buildLy << std::endl;
+    inif.close();
+
+#pragma endregion trace_n_files
 
     Simulator::Stop(Seconds(simTime));
     Simulator::Run();

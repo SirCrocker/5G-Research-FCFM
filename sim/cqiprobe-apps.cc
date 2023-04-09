@@ -7,6 +7,7 @@
 
 using namespace ns3;
 
+// TODO: Leer que hace.
 class MyAppTag : public Tag
 {
 public:
