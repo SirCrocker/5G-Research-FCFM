@@ -32,7 +32,7 @@ NS_LOG_COMPONENT_DEFINE ("MyCode");
 auto tic = std::chrono::high_resolution_clock::now();
 auto itime = std::chrono::high_resolution_clock::now();
 static double SegmentSize = 1448.0; // Máxima cantidad de bits que puede tener un paquete
-double simTime = 10;           // in second
+double simTime = 100;           // in second
 
 // Trace congestion window
 static void

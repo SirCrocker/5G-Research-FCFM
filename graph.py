@@ -32,9 +32,14 @@ bg_cyan='\033[0;46m'
 
 tic=time.time()
 
-myhome="/home/jsandova/ns-3-dev/"
-if (len(sys.argv)>1):
-    myhome=myhome+sys.argv[1]+"/"
+myhome="/home/jsandova/ns-3-dev"
+if (len(sys.argv)>2):
+    myhome=sys.argv[1]+"/"
+    mainprobe=sys.argv[2]
+else:
+    print("Not enough arguments.")
+    exit()
+
 config = configparser.ConfigParser()
 config.read(myhome+'graph.ini')
 
@@ -95,7 +100,7 @@ print(cyan + title + clear, end="...", flush=True)
 mob = pd.read_csv(myhome+file, sep = "\t")
 mob.set_index('Time', inplace=True)
 ax1= mob.plot.scatter( x='x',y='y', ax=ax,title=title)
-gNbicon=plt.imread(get_sample_data('/home/jsandova/ns-3-dev/scratch/gNb.png'))
+gNbicon=plt.imread(get_sample_data(f'{mainprobe}/gNb.png'))
 gNbbox = OffsetImage(gNbicon, zoom = 0.25)
 for g in range(gNbNum):
     gNbPos=[gNbX,(gNbY+5+g*gNbD)]
@@ -107,7 +112,7 @@ if (enableBuildings):
         rect=mpatches.Rectangle((buildX+(buildLx+buildDx)*col,buildY+(buildLy+buildDy)*row),buildLx,buildLy, alpha=0.5, facecolor="red")
         plt.gca().add_patch(rect)
 
-UEicon=plt.imread(get_sample_data('/home/jsandova/ns-3-dev/scratch/UE.png'))
+UEicon=plt.imread(get_sample_data(f'{mainprobe}/UE.png'))
 UEbox = OffsetImage(UEicon, zoom = 0.02)
 
 for ue in mob['UE'].unique():

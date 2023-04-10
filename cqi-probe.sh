@@ -1,9 +1,9 @@
 #!/usr/bin/bash
 
-# Se importan variables de ambiente y colores
-source paths.cfg
+# Color and paths vars are imported
+source "paths.cfg"
 
-# Tiempo inicial
+# Start time
 tic=$(date +%s)
 
 # Default values
@@ -102,7 +102,7 @@ cp "${RUTA_PROBE}/graph.py" $outfolder/$bkfolder/graph.py.txt
     --rlcBufferPerc=`echo $rlcBufferPer`
     --cqiHighGain=`echo $cqiHighGain`
     --mobility=1
-    " --cwd `echo $outfolder/$bkfolder` 
+    " --cwd `echo $outfolder/$bkfolder`
 
 echo $bkfolder
 
@@ -115,7 +115,7 @@ echo
 printf "Running... Graph Script\n"
 echo
 
-python3 "${RUTA_PROBE}/graph.py" $outfolder/$bkfolder
+python3 "${RUTA_PROBE}/graph.py" $outfolder/$bkfolder $RUTA_PROBE
 
 toc=$(date +%s)
 printf "Simulation Processed in: "${magenta}$(($toc-$tic))${clear}" seconds\n"
