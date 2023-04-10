@@ -1,30 +1,16 @@
 #!/usr/bin/bash
+
+# Se importan variables de ambiente y colores
+source paths.cfg
+
+# Tiempo inicial
 tic=$(date +%s)
-
-# Set text colors
-clear='\033[0m'
-red='\033[0;31m'
-green='\033[0;32m'
-yellow='\033[0;33m'
-blue='\033[0;34m'
-magenta='\033[0;35m'
-cyan='\033[0;36m'
-
-# Set Background colors
-bg_red='\033[0;41m'
-bg_green='\033[0;42m'
-bg_yellow='\033[0;43m'
-bg_blue='\033[0;44m'
-bg_magenta='\033[0;45m'
-bg_cyan='\033[0;46m'
 
 # Default values
 serverType='Edge'
 rlcBufferPer=10
 tcpTypeId='TcpNewReno'
 cqiHighGain=2
-
-
 
 helpFunction()
 {
@@ -89,9 +75,10 @@ printf "Running... \ncqiHighGain:${green}${cqiHighGain}${clear}\tRLCBuffer: ${gr
 echo
 
 #backup run-sim and cc
-outfolder="./scratch/cqiProbe/out"
+outfolder="${RUTA_PROBE}/out"
 bkfolder=$cqiHighGain"-"$tcpTypeId"-"$servertag"-"$buffertag"-"`date +%Y%m%d%H%M`
 me=`basename "$0"`
+
 if [ ! -d "$outfolder" ];
 then
 	mkdir $outfolder
@@ -103,12 +90,12 @@ then
 fi
 
 cp $me $outfolder/$bkfolder/$me.txt
-cp scratch/cqiProbe/my-cqi-probe.cc $outfolder/$bkfolder/my-cqi-probe.cc.txt
-cp packet-error-rate.sh $outfolder/$bkfolder/packet-error-rate.sh.txt
-cp graph.py $outfolder/$bkfolder/graph.py.txt
+cp $RUTA_CC $outfolder/$bkfolder/my-cqi-probe.cc.txt
+cp "${RUTA_PROBE}/packet-error-rate.sh" $outfolder/$bkfolder/packet-error-rate.sh.txt
+cp "${RUTA_PROBE}/graph.py" $outfolder/$bkfolder/graph.py.txt
 
 
-./ns3 run "my-cqi-probe
+"${RUTA_NS3}/ns3" run "${FILENAME}
     --flowType=`echo $flowType`
     --tcpTypeId=`echo $tcpTypeId`
     --serverType=`echo $serverType`
@@ -122,13 +109,13 @@ echo $bkfolder
 echo
 printf "Running... Packet Error Rate Script\n"
 echo
-./packet-error-rate.sh $outfolder/$bkfolder
+sh "${RUTA_PROBE}/packet-error-rate.sh" $outfolder/$bkfolder
 
 echo
 printf "Running... Graph Script\n"
 echo
 
-python3 graph.py $outfolder/$bkfolder
+python3 "${RUTA_PROBE}/graph.py" $outfolder/$bkfolder
 
 toc=$(date +%s)
 printf "Simulation Processed in: "${magenta}$(($toc-$tic))${clear}" seconds\n"
