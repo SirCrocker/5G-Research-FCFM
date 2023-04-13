@@ -104,7 +104,7 @@ cp "${RUTA_PROBE}/graph.py" $outfolder/$bkfolder/graph.py.txt
     --mobility=1
     " --cwd `echo $outfolder/$bkfolder`
 
-echo $bkfolder
+echo "Destination folder name: $bkfolder"
 
 echo
 printf "Running... Packet Error Rate Script\n"

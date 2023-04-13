@@ -20,7 +20,7 @@ then
 
 }
 fi
-echo $myfolder
+#echo $myfolder
 
 
 serverID=`grep serverID ${myfolder}/graph.ini | cut -d " " -f 3`
