@@ -11,45 +11,53 @@ serverType='Edge'
 rlcBufferPer=10
 tcpTypeId='TcpNewReno'
 cqiHighGain=2
+mobilityVal=0
 
 helpFunction()
 {
    echo ""
-   echo "Usage: $0 -g $cqiHighGain -t $tcpTypeId -s $serverType -r $rlcBufferPer"
+   echo "Usage: $0 -g $cqiHighGain -t $tcpTypeId -s $serverType -r $rlcBufferPer -m $mobilityVal"
    echo -e "\t-g 'CQI step 1-10'"
    echo -e "\t-t 'TcpNewReno' or 'TcpBbr' or 'TcpCubic' or 'TcpHighSpeed' or 'TcpBic' or 'TcpLinuxReno' or 'UDP'"
    echo -e "\t-s 'Remote' or 'Edge'"
    echo -e "\t-r RLC Buffer BDP Percentage 10 o 100"
+   echo -e "\t-m Mobility 1 or 0"
    exit 1 # Exit script after printing help
 }
 
-
-while getopts "t:r:s:" opt
+while getopts "t:r:s:m:" opt
 do
    case "$opt" in
       g ) cqiHighGain="$OPTARG" ;;
       t ) tcpTypeId="$OPTARG" ;;
       s ) serverType="$OPTARG" ;;
       r ) rlcBufferPer="$OPTARG" ;;
+      m ) mobilityVal="$OPTARG" ;;
       ? ) helpFunction ;; # Print helpFunction in case parameter is non-existent
    esac
 done
 # Validations
 if [ "$serverType" != "Remote" ] && [ "$serverType" != "Edge" ]
 then
-   echo "ServerType \"$serverType\" no available";
+   echo "ServerType \"$serverType\" not available";
    helpFunction
 fi
 
 if [ "$rlcBufferPer" != "10" ] && [ "$rlcBufferPer" != "100" ]
 then
-   echo "rlcBuffer \"$rlcBufferPer\" no available";
+   echo "rlcBuffer \"$rlcBufferPer\" not available";
+   helpFunction
+fi
+
+if [ "$mobilityVal" != "0" ] && [ "$mobilityVal" != "1" ]
+then
+   echo "mobilityVal \"$mobilityVal\" not available";
    helpFunction
 fi
 
 if [ "$tcpTypeId" != "UDP" ] && [ "$tcpTypeId" != "TcpNewReno" ] && [ "$tcpTypeId" != "TcpBbr" ] && [ "$tcpTypeId" != "TcpCubic" ] && [ "$tcpTypeId" != "TcpHighSpeed" ] && [ "$tcpTypeId" != "TcpBic" ] && [ "$tcpTypeId" != "TcpLinuxReno" ]
 then
-   echo "tcpTypeId \"$tcpTypeId\" no available";
+   echo "tcpTypeId \"$tcpTypeId\" not available";
    helpFunction
 fi
 
@@ -101,7 +109,7 @@ cp "${RUTA_PROBE}/graph.py" $outfolder/$bkfolder/graph.py.txt
     --serverType=`echo $serverType`
     --rlcBufferPerc=`echo $rlcBufferPer`
     --cqiHighGain=`echo $cqiHighGain`
-    --mobility=1
+    --mobility=`echo $mobilityVal`
     " --cwd `echo $outfolder/$bkfolder`
 
 echo "Destination folder name: $bkfolder"
