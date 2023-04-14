@@ -33,7 +33,11 @@ NS_LOG_COMPONENT_DEFINE("ProbeCqiSimulation");
 auto tic = std::chrono::high_resolution_clock::now();       // Initial time
 auto itime = std::chrono::high_resolution_clock::now();     // Initial time 2
 const double SEGMENT_SIZE = 1448.0;   // Máxima cantidad de bits que puede tener un paquete
-double simTime = 10;           // in seconds
+double simTime = 30;            // in seconds
+const double NOISE_MEAN = 7;    // Default value is 5
+const double NOISE_VAR = 2;     // Noise variance
+const double NOISE_BOUND = 3;   // Noise bound, read NormalDistribution for info about the parameter.
+const std::string LOG_FILENAME = "output.log";
 
 /* Trace functions, definitions are at EOF */
 static void CwndTracer(Ptr<OutputStreamWrapper> stream, uint32_t oldval, uint32_t newval);
@@ -48,6 +52,7 @@ static void TraceTcp(uint32_t nodeId, uint32_t socketId);
 /* Helper functions, definitions are at EOF */
 static void InstallTCP2 (Ptr<Node> remoteHost, Ptr<Node> sender, uint16_t sinkPort, float startTime, float stopTime, float dataRate);
 static void CalculatePosition(NodeContainer* ueNodes, NodeContainer* gnbNodes, std::ostream* os);
+static void AddRandomNoise(Ptr<NrPhy> ue_phy, uint16_t, uint16_t, double, uint16_t, uint8_t);//, double mean, double variance, double bound);
 
 
 int main(int argc, char* argv[]) {
@@ -60,6 +65,7 @@ int main(int argc, char* argv[]) {
     bool logging = true;    // whether to enable logging from the simulation, another option is by
                             // exporting the NS_LOG environment variable
     bool shadowing = true;  // to enable shadowing effect
+    bool addNoise = false;  // To enable/disable added noise to the channel
 
     double hBS;          // base station antenna height in meters
     double hUE;          // user antenna height in meters
@@ -134,10 +140,39 @@ int main(int argc, char* argv[]) {
     cmd.AddValue("enableBuildings", "If set to 1, enable Buildings", enableBuildings);
     cmd.AddValue("shadowing", "If set to 1, enable Shadowing", shadowing);
     cmd.AddValue("cqiHighGain", "Steps of CQI Probe. Means CQI=round(CQI*cqiHighGain)", cqiHighGain);
+    cmd.AddValue("addNoise", "Add normal distributed noise to the simulation", addNoise);
 
     cmd.Parse(argc, argv);
 
     #pragma endregion SimArguments
+    
+    /********************************************************************************************************************
+     * LOGS
+    ********************************************************************************************************************/
+    #pragma region logs
+    // Redirect logs to output file, clog -> LOG_FILENAME
+    std::ofstream of(LOG_FILENAME);
+    auto clog_buff = std::clog.rdbuf();
+    std::clog.rdbuf(of.rdbuf());
+
+    // enable logging
+    if (logging)
+    {
+        // LogComponentEnable ("LteRlcUm", LOG_LEVEL_ALL);
+        // LogComponentEnable ("ThreeGppSpectrumPropagationLossModel", LOG_LEVEL_ALL);
+        // LogComponentEnable("ThreeGppPropagationLossModel", LOG_LEVEL_ALL);
+        // LogComponentEnable ("ThreeGppChannelModel", LOG_LEVEL_ALL);
+        // LogComponentEnable ("ChannelConditionModel", LOG_LEVEL_ALL);
+        // LogComponentEnable("TcpCongestionOps",LOG_LEVEL_ALL);
+        // LogComponentEnable("TcpBic",LOG_LEVEL_ALL);
+        // LogComponentEnable("TcpBbr",LOG_LEVEL_ALL);
+        // LogComponentEnable ("UdpClient", LOG_LEVEL_INFO);
+        // LogComponentEnable ("UdpServer", LOG_LEVEL_INFO);
+        // LogComponentEnable ("LteRlcUm", LOG_LEVEL_LOGIC);
+        // LogComponentEnable ("LtePdcp", LOG_LEVEL_INFO);
+    }
+
+    #pragma endregion logs
 
     if (serverType == "Remote")
     {
@@ -148,16 +183,6 @@ int main(int argc, char* argv[]) {
         serverDelay = 0.004;
     }
     rlcBuffer = round(dataRate*1e6/8*serverDelay*rlcBufferPerc/100); // Bytes BDP=250Mbps*100ms default: 999999999
-
-    // Radio Config
-
-    /* Already defined:
-    Config::SetDefault ("ns3::ThreeGppChannelModel::UpdatePeriod", TimeValue (MilliSeconds (0)));
-
-    std::string errorModel = "ns3::NrEesmIrT1"; //ns3::NrEesmCcT1, ns3::NrEesmCcT2, ns3::NrEesmIrT1, ns3::NrEesmIrT2, ns3::NrLteMiErrorModel
-    Config::SetDefault("ns3::NrAmc::ErrorModelType", TypeIdValue(TypeId::LookupByName(errorModel)));
-    Config::SetDefault("ns3::NrAmc::AmcModel", EnumValue(NrAmc::ErrorModel )); // NrAmc::ShannonModel // NrAmc::ErrorModel
-    */
 
     // TCP config
     // TCP Setting
@@ -181,9 +206,9 @@ int main(int argc, char* argv[]) {
         Config::SetDefault("ns3::TcpSocket::DataRetries", UintegerValue(100)); // Number of data retransmission attempts. Default 6
         Config::SetDefault("ns3::TcpSocket::PersistTimeout", TimeValue (Seconds (10))); // Number of data retransmission attempts. Default 6
 
-        Config::Set ("/NodeList/*/DeviceList/*/TxQueue/MaxSize", QueueSizeValue (QueueSize ("100p")));
-        Config::Set ("/NodeList/*/DeviceList/*/RxQueue/MaxSize", QueueSizeValue (QueueSize ("100p")));
-        Config::SetDefault("ns3::DropTailQueue<Packet>::MaxSize", QueueSizeValue(QueueSize("100p"))); //A FIFO packet queue that drops tail-end packets on overflow
+        Config::Set ("/NodeList/*/DeviceList/*/TxQueue/MaxSize",  QueueSizeValue(QueueSize ("100p")));
+        Config::Set ("/NodeList/*/DeviceList/*/RxQueue/MaxSize",  QueueSizeValue(QueueSize ("100p")));
+        Config::SetDefault("ns3::DropTailQueue<Packet>::MaxSize", QueueSizeValue(QueueSize ("100p"))); //A FIFO packet queue that drops tail-end packets on overflow
         Config::SetDefault(queueDisc + "::MaxSize", QueueSizeValue(QueueSize("100p"))); //100p Simple queue disc implementing the FIFO (First-In First-Out) policy
         Config::SetDefault("ns3::TcpL4Protocol::RecoveryType",
                            TypeIdValue(TypeId::LookupByName("ns3::TcpClassicRecovery"))); //set the congestion window value to the slow start threshold and maintain it at such value until we are fully recovered
@@ -202,29 +227,9 @@ int main(int argc, char* argv[]) {
     }
     else{
         // TCPTrace=false;
-
     }
 
-
-    // enable logging
-    if (logging)
-    {
-        // LogComponentEnable ("LteRlcUm", LOG_LEVEL_ALL);
-        // LogComponentEnable ("ThreeGppSpectrumPropagationLossModel", LOG_LEVEL_ALL);
-        // LogComponentEnable("ThreeGppPropagationLossModel", LOG_LEVEL_ALL);
-        // LogComponentEnable ("ThreeGppChannelModel", LOG_LEVEL_ALL);
-        // LogComponentEnable ("ChannelConditionModel", LOG_LEVEL_ALL);
-        // LogComponentEnable("TcpCongestionOps",LOG_LEVEL_ALL);
-        // LogComponentEnable("TcpBic",LOG_LEVEL_ALL);
-        // LogComponentEnable("TcpBbr",LOG_LEVEL_ALL);
-        // LogComponentEnable ("UdpClient", LOG_LEVEL_INFO);
-        // LogComponentEnable ("UdpServer", LOG_LEVEL_INFO);
-        // LogComponentEnable ("LteRlcUm", LOG_LEVEL_LOGIC);
-        // LogComponentEnable ("LtePdcp", LOG_LEVEL_INFO);
-    }
-
-    // 
-    /*
+    /**
      * Default values for the simulation. We are progressively removing all
      * the instances of SetDefault, but we need it for legacy code (LTE)
      */
@@ -346,7 +351,7 @@ int main(int argc, char* argv[]) {
     nrHelper->SetBeamformingHelper(idealBeamformingHelper);
     nrHelper->SetEpcHelper(epcHelper);
     
-    /*
+    /**
      * Spectrum configuration. We create a single operational band and configure the scenario.
      */
     BandwidthPartInfoPtrVector allBwps;
@@ -428,6 +433,15 @@ int main(int argc, char* argv[]) {
         nrHelper->GetGnbPhy(enbNetDev.Get(u), 0)->SetTxPower(txPower);
         nrHelper->GetGnbPhy(enbNetDev.Get(u), 0)
             ->SetAttribute("Numerology", UintegerValue(numerology));
+    }
+
+    if (addNoise) 
+    {   
+        // Get the physical layer and add noise whenerver DlDataSinr is executed
+        Ptr<NrUePhy> uePhy = nrHelper->GetUePhy(ueNetDev.Get(0), 0);
+
+        Config::ConnectWithoutContext("/NodeList/*/DeviceList/*/ComponentCarrierMapUe/*/NrUePhy/DlDataSinr",
+                        MakeBoundCallback(&AddRandomNoise, uePhy));
     }
 
     // When all the configuration is done, explicitly call UpdateConfig ()
@@ -594,6 +608,7 @@ int main(int argc, char* argv[]) {
     inif << "dataRate = " << dataRate << std::endl;
     inif << "cqiHighGain = " << cqiHighGain << std::endl;
     inif << "ProbeCqiDuration = " << ProbeCqiDuration << std::endl;
+    inif << "addNoise = " << addNoise << std::endl; 
     
 
     inif << std::endl;
@@ -622,6 +637,8 @@ int main(int argc, char* argv[]) {
     Simulator::Run();
     Simulator::Destroy();
 
+    std::clog.rdbuf(clog_buff); // Redirect clog to original buffer
+
     std::cout << "\nThe End" << std::endl;
     auto toc = std::chrono::high_resolution_clock::now();
     std::cout << "Total Time: " << "\033[1;35m"  << 1.e-9*std::chrono::duration_cast<std::chrono::nanoseconds>(toc-itime).count() << "\033[0m"<<  std::endl;
@@ -629,6 +646,9 @@ int main(int argc, char* argv[]) {
     return 0;
 };
 
+/*************************************************************************************************************************************************
+ * Trace and util functions (Own)
+**************************************************************************************************************************************************/
 #pragma region trace_n_utils_functions
 /**
  * CWND tracer.
@@ -880,4 +900,31 @@ CalculatePosition(NodeContainer* ueNodes, NodeContainer* gnbNodes, std::ostream*
     
     Simulator::Schedule(MilliSeconds(100), &CalculatePosition, ueNodes, gnbNodes, os);
 }
+
+/**
+ * Adds Normal Distributed Noise to the specified Physical layer (it is assumed that corresponds to the UE)
+ * The function is implemented to be called as the same time as `DlDataSinrCallback`, i.e. unused arguments had to
+ * be added so it would function.
+ * 
+ * \example  Config::ConnectWithoutContext("/NodeList/.../DeviceList/.../ComponentCarrierMapUe/.../NrUePhy/DlDataSinr",
+ *                  MakeBoundCallback(&AddRandomNoise, uePhy))
+ * 
+*/
+static void AddRandomNoise(Ptr<NrPhy> ue_phy, uint16_t a, uint16_t b, double c, uint16_t d, uint8_t e) {
+
+    Ptr<NormalRandomVariable> awgn = CreateObject<NormalRandomVariable>();
+    awgn->SetAttribute("Mean", DoubleValue(NOISE_MEAN));
+    awgn->SetAttribute("Variance", DoubleValue(NOISE_VAR));
+    awgn->SetAttribute("Bound", DoubleValue(NOISE_BOUND));
+
+    ue_phy->SetNoiseFigure(awgn->GetValue());
+
+    /*
+    Simulator::Schedule(MilliSeconds(1000),
+                        &NrPhy::SetNoiseFigure,
+                        ue_phy,
+                        awgn->GetValue()); // Default noise 5 dB, cada vez que se actualice el SINR que cambie??
+    */
+}
+
 #pragma endregion trace_n_utils_functions
