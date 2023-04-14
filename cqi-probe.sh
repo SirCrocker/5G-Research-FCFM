@@ -12,20 +12,22 @@ rlcBufferPer=10
 tcpTypeId='TcpNewReno'
 cqiHighGain=2
 mobilityVal=0
+build_ns3=1
 
 helpFunction()
 {
    echo ""
-   echo "Usage: $0 -g $cqiHighGain -t $tcpTypeId -s $serverType -r $rlcBufferPer -m $mobilityVal"
+   echo "Usage: $0 -g $cqiHighGain -t $tcpTypeId -s $serverType -r $rlcBufferPer -m $mobilityVal -b $build_ns3"
    echo -e "\t-g 'CQI step 1-10'"
    echo -e "\t-t 'TcpNewReno' or 'TcpBbr' or 'TcpCubic' or 'TcpHighSpeed' or 'TcpBic' or 'TcpLinuxReno' or 'UDP'"
    echo -e "\t-s 'Remote' or 'Edge'"
    echo -e "\t-r RLC Buffer BDP Percentage 10 o 100"
    echo -e "\t-m Mobility 1 or 0"
+   echo -e "\t-b Select if ns3 builds or not, default 1"
    exit 1 # Exit script after printing help
 }
 
-while getopts "t:r:s:m:" opt
+while getopts "t:r:s:m:b:" opt
 do
    case "$opt" in
       g ) cqiHighGain="$OPTARG" ;;
@@ -33,6 +35,7 @@ do
       s ) serverType="$OPTARG" ;;
       r ) rlcBufferPer="$OPTARG" ;;
       m ) mobilityVal="$OPTARG" ;;
+      b ) build_ns3="$OPTARG" ;;
       ? ) helpFunction ;; # Print helpFunction in case parameter is non-existent
    esac
 done
@@ -59,6 +62,11 @@ if [ "$tcpTypeId" != "UDP" ] && [ "$tcpTypeId" != "TcpNewReno" ] && [ "$tcpTypeI
 then
    echo "tcpTypeId \"$tcpTypeId\" not available";
    helpFunction
+fi
+
+if [ "$build_ns3" == "1" ]
+then 
+   "${RUTA_NS3}/ns3" build
 fi
 
 printf "\nRunning ${magenta}$0 -t ${tcpTypeId} -r ${rlcBufferPer} -s ${serverType}${clear}\n"
@@ -102,7 +110,6 @@ cp $RUTA_CC $outfolder/$bkfolder/my-cqi-probe.cc.txt
 cp "${RUTA_PROBE}/packet-error-rate.sh" $outfolder/$bkfolder/packet-error-rate.sh.txt
 cp "${RUTA_PROBE}/graph.py" $outfolder/$bkfolder/graph.py.txt
 
-
 "${RUTA_NS3}/ns3" run "${FILENAME}
     --flowType=`echo $flowType`
     --tcpTypeId=`echo $tcpTypeId`
@@ -110,7 +117,7 @@ cp "${RUTA_PROBE}/graph.py" $outfolder/$bkfolder/graph.py.txt
     --rlcBufferPerc=`echo $rlcBufferPer`
     --cqiHighGain=`echo $cqiHighGain`
     --mobility=`echo $mobilityVal`
-    " --cwd `echo $outfolder/$bkfolder`
+    " --cwd `echo $outfolder/$bkfolder` --no-build
 
 echo "Destination folder name: $bkfolder"
 
