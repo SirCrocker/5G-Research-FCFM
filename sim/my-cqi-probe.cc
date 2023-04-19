@@ -286,7 +286,7 @@ int main(int argc, char* argv[]) {
     // position the mobile terminals and enable the mobility
     MobilityHelper uemobility;
     uemobility.SetMobilityModel("ns3::ConstantVelocityMobilityModel");
-    // uemobility.SetMobilityModel("ns3::RandomDirection2dMobilityModel","Bounds", RectangleValue(Rectangle(39, 42, 22, 28)));
+    // uemobility.SetMobilityModel("ns3::RandomDirection2dMobilityModel","Bounds", RectangleValue(Rectangle(x_min, x_max, y_min, y_max)));
     // uemobility.SetMobilityModel("ns3::WaypointMobilityModel");
     uemobility.Install(ueNodes);
 
@@ -305,7 +305,7 @@ int main(int argc, char* argv[]) {
         // Ptr<WaypointMobilityModel> waypoints = ueNodes.Get(u)->GetObject<WaypointMobilityModel>();
         // waypoints->AddWaypoint(Waypoint (Seconds(0.0), Vector(xUE, yUE, hUE))); // Posición inicial
         // waypoints->AddWaypoint(Waypoint (Seconds(10.0), Vector(xUE-5, yUE-10, hUE)));
-        // waypoints->AddWaypoint(Waypoint (Seconds(20.0), Vector(xUE, yUE, hUE)));
+        // waypoints->AddWaypoint(Waypoint (Seconds(20.0), Vector(xUE, yUE, hUE))); // Posición final
     }
     #pragma endregion UE_gNB
 
