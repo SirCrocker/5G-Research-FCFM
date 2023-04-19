@@ -67,6 +67,8 @@ fi
 if [ "$build_ns3" == "1" ]
 then 
    "${RUTA_NS3}/ns3" build
+   clear
+   echo "NS3 was built!"
 fi
 
 printf "\nRunning ${magenta}$0 -t ${tcpTypeId} -r ${rlcBufferPer} -s ${serverType}${clear}\n"
