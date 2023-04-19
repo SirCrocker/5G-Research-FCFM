@@ -32,8 +32,8 @@ NS_LOG_COMPONENT_DEFINE("ProbeCqiSimulation");
 /* Global Variables */
 auto tic = std::chrono::high_resolution_clock::now();       // Initial time
 auto itime = std::chrono::high_resolution_clock::now();     // Initial time 2
-const double SEGMENT_SIZE = 1448.0;   // Máxima cantidad de bits que puede tener un paquete
-double simTime = 30;            // in seconds
+const double SEGMENT_SIZE = 1448.0;   // Maximum number of bits a packet can have
+double simTime = 15;            // in seconds
 const double NOISE_MEAN = 7;    // Default value is 5
 const double NOISE_VAR = 2;     // Noise variance
 const double NOISE_BOUND = 3;   // Noise bound, read NormalDistribution for info about the parameter.
@@ -52,11 +52,11 @@ static void TraceTcp(uint32_t nodeId, uint32_t socketId);
 /* Helper functions, definitions are at EOF */
 static void InstallTCP2 (Ptr<Node> remoteHost, Ptr<Node> sender, uint16_t sinkPort, float startTime, float stopTime, float dataRate);
 static void CalculatePosition(NodeContainer* ueNodes, NodeContainer* gnbNodes, std::ostream* os);
-static void AddRandomNoise(Ptr<NrPhy> ue_phy, uint16_t, uint16_t, double, uint16_t, uint8_t);//, double mean, double variance, double bound);
+static void AddRandomNoise(Ptr<NrPhy> ue_phy, uint16_t, uint16_t, double, uint16_t, uint8_t);
 
 
 int main(int argc, char* argv[]) {
-#pragma region Variables
+    #pragma region Variables
 
     double frequency = 27.3e9;      // central frequency 28e9
     double bandwidth = 100e6;       // bandwidth
@@ -65,7 +65,7 @@ int main(int argc, char* argv[]) {
     bool logging = true;    // whether to enable logging from the simulation, another option is by
                             // exporting the NS_LOG environment variable
     bool shadowing = true;  // to enable shadowing effect
-    bool addNoise = false;  // To enable/disable added noise to the channel
+    bool addNoise = true;  // To enable/disable added noise to the channel
 
     double hBS;          // base station antenna height in meters
     double hUE;          // user antenna height in meters
@@ -170,9 +170,15 @@ int main(int argc, char* argv[]) {
         // LogComponentEnable ("UdpServer", LOG_LEVEL_INFO);
         // LogComponentEnable ("LteRlcUm", LOG_LEVEL_LOGIC);
         // LogComponentEnable ("LtePdcp", LOG_LEVEL_INFO);
+        LogComponentEnable("NrUePhy", LOG_ALL);
     }
 
     #pragma endregion logs
+
+    /********************************************************************************************************************
+     * Servertype, TCP config & settings, scenario definition
+    ********************************************************************************************************************/
+    #pragma region sv_tcp_scenario
 
     if (serverType == "Remote")
     {
@@ -257,11 +263,12 @@ int main(int argc, char* argv[]) {
                      "'InH-OfficeMixed', and 'InH-OfficeOpen'.");
     }
     
+    #pragma endregion sv_tcp_scenario
 
-    /******************************************************************************************************************************************
+    /********************************************************************************************************************
     * Create base stations and mobile terminal
     * Define positions, mobility types and speed of UE and gNB.
-    *******************************************************************************************************************************************/
+    ********************************************************************************************************************/
     #pragma region UE_gNB   
 
     NodeContainer gnbNodes;
@@ -309,9 +316,9 @@ int main(int argc, char* argv[]) {
     }
     #pragma endregion UE_gNB
 
-    /************************************************************************************************************************************************
+    /********************************************************************************************************************
      * Create and install buildings
-     *************************************************************************************************************************************************/
+     ********************************************************************************************************************/
     if (enableBuildings)
     {
         std::cout << cyan << "Installing Building" << clear << std::endl;
@@ -345,9 +352,9 @@ int main(int argc, char* argv[]) {
 
     }
 
-    /************************************************************************************************************************************************
+    /********************************************************************************************************************
      * NR Stuff
-     *************************************************************************************************************************************************/
+     ********************************************************************************************************************/
     #pragma region NR_Config
     /**
      * Create NR simulation helpers
@@ -448,6 +455,7 @@ int main(int argc, char* argv[]) {
         // Get the physical layer and add noise whenerver DlDataSinr is executed
         Ptr<NrUePhy> uePhy = nrHelper->GetUePhy(ueNetDev.Get(0), 0);
 
+        uePhy->SetNoiseFigure(NOISE_MEAN);
         Config::ConnectWithoutContext("/NodeList/*/DeviceList/*/ComponentCarrierMapUe/*/NrUePhy/DlDataSinr",
                         MakeBoundCallback(&AddRandomNoise, uePhy));
     }
@@ -464,6 +472,10 @@ int main(int argc, char* argv[]) {
     }
     #pragma endregion NR_Config
 
+    /********************************************************************************************************************
+     * Setup and install IP, internet and remote servers
+     ********************************************************************************************************************/
+    #pragma region internet
     // create the internet and install the IP stack on the UEs
     // get SGW/PGW and create a single RemoteHost
     Ptr<Node> pgw = epcHelper->GetPgwNode();
@@ -563,10 +575,11 @@ int main(int argc, char* argv[]) {
           
         }
     }
+    #pragma endregion internet
 
-    /****************************************************************************************************************************
+    /********************************************************************************************************************
      * Trace and file generation
-     ****************************************************************************************************************************/
+     ********************************************************************************************************************/
     #pragma region trace_n_files
     // enable the traces provided by the nr module
     if (NRTrace)
@@ -616,7 +629,7 @@ int main(int argc, char* argv[]) {
     inif << "dataRate = " << dataRate << std::endl;
     inif << "cqiHighGain = " << cqiHighGain << std::endl;
     inif << "ProbeCqiDuration = " << ProbeCqiDuration << std::endl;
-    inif << "addNoise = " << addNoise << std::endl; 
+    inif << "addNoise = " << addNoise << std::endl;
     
 
     inif << std::endl;
@@ -654,9 +667,9 @@ int main(int argc, char* argv[]) {
     return 0;
 };
 
-/*************************************************************************************************************************************************
+/********************************************************************************************************************
  * Trace and util functions (Own)
-**************************************************************************************************************************************************/
+********************************************************************************************************************/
 #pragma region trace_n_utils_functions
 /**
  * CWND tracer.
@@ -765,7 +778,7 @@ SsThreshTracer(Ptr<OutputStreamWrapper> stream, uint32_t oldval, uint32_t newval
 static void
 TraceTcp(uint32_t nodeId, uint32_t socketId)
 {
-    std::cout << cyan << "\nTrace TCP: " << nodeId << "<->" << socketId << " at: "<<  
+    std::cout << "\r\e[K" << cyan << "Trace TCP: " << nodeId << "<->" << socketId << " at: "<<  
             1.e-9*std::chrono::duration_cast<std::chrono::nanoseconds>(tic-itime).count()<< clear << std::endl;
 
 
@@ -882,14 +895,14 @@ CalculatePosition(NodeContainer* ueNodes, NodeContainer* gnbNodes, std::ostream*
 {
     auto toc = std::chrono::high_resolution_clock::now();
     Time now = Simulator::Now(); 
-    
     pid_t pid = getpid();
+    auto elapsed_time = 1.e-9*std::chrono::duration_cast<std::chrono::nanoseconds>(toc-itime).count();
 
     std::cout << "\r\e[K" << "pid: " << green << pid << clear << 
             " ST: " << "\033[1;32m["  << now.GetSeconds() << "/"<< simTime <<"] "<< "\033[0m"<<  
             " PT: " << 1.e-9*std::chrono::duration_cast<std::chrono::nanoseconds>(toc-tic).count()<< " "
-            " ET: " << "\033[1;35m"  << 1.e-9*std::chrono::duration_cast<std::chrono::nanoseconds>(toc-itime).count() << "\033[0m"<< " " <<
-            " RT: " << "\033[1;34m"  << 1.e-9*std::chrono::duration_cast<std::chrono::nanoseconds>(toc-itime).count() * simTime / now.GetSeconds() - 1.e-9*std::chrono::duration_cast<std::chrono::nanoseconds>(toc-itime).count()<< "\033[0m"<< std::flush;
+            " ET: " << "\033[1;35m"  << elapsed_time << "\033[0m"<< " " <<
+            " RT: " << "\033[1;34m"  << elapsed_time * (simTime / now.GetSeconds() - 1) << "\033[0m"<< std::flush;
     // std::cout << "SimTime: "<<now.GetSeconds() << "/"<< simTime <<"\t"<<  "Processed in: " << 1.e-9*std::chrono::duration_cast<std::chrono::nanoseconds>(toc-tic).count()<< ;
 
     for (uint32_t u = 0; u < ueNodes->GetN(); ++u)
@@ -911,8 +924,8 @@ CalculatePosition(NodeContainer* ueNodes, NodeContainer* gnbNodes, std::ostream*
 
 /**
  * Adds Normal Distributed Noise to the specified Physical layer (it is assumed that corresponds to the UE)
- * The function is implemented to be called as the same time as `DlDataSinrCallback`, i.e. unused arguments had to
- * be added so it would function.
+ * The function is implemented to be called at the same time as `DlDataSinrCallback`, this implies that unused arguments 
+ * had to be added so it would function.
  * 
  * \example  Config::ConnectWithoutContext("/NodeList/.../DeviceList/.../ComponentCarrierMapUe/.../NrUePhy/DlDataSinr",
  *                  MakeBoundCallback(&AddRandomNoise, uePhy))
@@ -931,7 +944,7 @@ static void AddRandomNoise(Ptr<NrPhy> ue_phy, uint16_t a, uint16_t b, double c, 
     Simulator::Schedule(MilliSeconds(1000),
                         &NrPhy::SetNoiseFigure,
                         ue_phy,
-                        awgn->GetValue()); // Default noise 5 dB, cada vez que se actualice el SINR que cambie??
+                        awgn->GetValue()); // Default ns3 noise: 5 dB
     */
 }
 
