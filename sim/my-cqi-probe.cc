@@ -32,11 +32,11 @@ NS_LOG_COMPONENT_DEFINE("ProbeCqiSimulation");
 /* Global Variables */
 auto tic = std::chrono::high_resolution_clock::now();       // Initial time
 auto itime = std::chrono::high_resolution_clock::now();     // Initial time 2
-double simTime = 30;            // in seconds
+double simTime = 7;            // in seconds
 Time timeRes = MilliSeconds(5); // Time to schedule the add noise function
 
 /* Noise vars */
-const double NOISE_MEAN = 7;    // Default value is 5
+const double NOISE_MEAN = 17;    // Default value is 5
 const double NOISE_VAR = 2;     // Noise variance
 const double NOISE_BOUND = 3;   // Noise bound, read NormalDistribution for info about the parameter.
 
@@ -176,7 +176,11 @@ int main(int argc, char* argv[]) {
         // LogComponentEnable ("UdpServer", LOG_LEVEL_INFO);
         // LogComponentEnable ("LteRlcUm", LOG_LEVEL_LOGIC);
         // LogComponentEnable ("LtePdcp", LOG_LEVEL_INFO);
-        // LogComponentEnable("NrUePhy", LOG_ALL);
+        // LogComponentEnable("NrMacSchedulerCQIManagement", LOG_INFO);
+        // LogComponentEnable("NrUePhy", LOG_FUNCTION);
+        // LogComponentEnable("NrGnbPhy", LOG_FUNCTION);
+        // LogComponentEnable("NrAmc", LOG_FUNCTION);
+        //LogComponentEnable("NrMacSchedulerCQIManagement", LOG_FUNCTION);
     }
 
     #pragma endregion logs
@@ -469,8 +473,6 @@ int main(int argc, char* argv[]) {
             Simulator::Schedule(timeRes * i, &AddRandomNoise, uePhy);
         }
 
-        // Config::ConnectWithoutContext("/NodeList/*/DeviceList/*/ComponentCarrierMapUe/*/NrUePhy/DlDataSinr",
-        //                MakeBoundCallback(&AddRandomNoise, uePhy));
     }
 
     // When all the configuration is done, explicitly call UpdateConfig ()
@@ -867,7 +869,7 @@ TraceTcp(uint32_t nodeId, uint32_t socketId)
 
 /**
  * InstallTCP2
- * Instala la aplicaciión "MyApp" en los nodos remoteHost, sender.
+ * Instala la aplicación "MyApp" en los nodos remoteHost, sender.
  */
 static void InstallTCP2 (Ptr<Node> remoteHost,
                         Ptr<Node> sender,
