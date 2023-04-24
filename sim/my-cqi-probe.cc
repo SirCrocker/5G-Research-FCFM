@@ -32,11 +32,15 @@ NS_LOG_COMPONENT_DEFINE("ProbeCqiSimulation");
 /* Global Variables */
 auto tic = std::chrono::high_resolution_clock::now();       // Initial time
 auto itime = std::chrono::high_resolution_clock::now();     // Initial time 2
-const double SEGMENT_SIZE = 1448.0;   // Maximum number of bits a packet can have
-double simTime = 15;            // in seconds
-const double NOISE_MEAN = 7;    // Default value is 5
+double simTime = 7;            // in seconds
+Time timeRes = MilliSeconds(5); // Time to schedule the add noise function
+
+/* Noise vars */
+const double NOISE_MEAN = 17;    // Default value is 5
 const double NOISE_VAR = 2;     // Noise variance
 const double NOISE_BOUND = 3;   // Noise bound, read NormalDistribution for info about the parameter.
+
+const double SEGMENT_SIZE = 1448.0;   // Maximum number of bits a packet can have
 const std::string LOG_FILENAME = "output.log";
 
 /* Trace functions, definitions are at EOF */
@@ -52,7 +56,7 @@ static void TraceTcp(uint32_t nodeId, uint32_t socketId);
 /* Helper functions, definitions are at EOF */
 static void InstallTCP2 (Ptr<Node> remoteHost, Ptr<Node> sender, uint16_t sinkPort, float startTime, float stopTime, float dataRate);
 static void CalculatePosition(NodeContainer* ueNodes, NodeContainer* gnbNodes, std::ostream* os);
-static void AddRandomNoise(Ptr<NrPhy> ue_phy, uint16_t, uint16_t, double, uint16_t, uint8_t);
+static void AddRandomNoise(Ptr<NrPhy> ue_phy);
 
 
 int main(int argc, char* argv[]) {
@@ -88,14 +92,16 @@ int main(int argc, char* argv[]) {
     bool NRTrace = true;    // whether to enable Trace NR
     bool TCPTrace = true;   // whether to enable Trace TCP
 
-    // RB Position
+    // RB Info and position
     uint16_t gNbNum = 1;    // Numbers of RB
+    uint32_t gNbSysIDbase = 1000; // gNb System ID base (every gNb starts from this)
     double gNbX = 50.0;     // X position
     double gNbY = 50.0;     // Y position
     uint16_t gNbD = 80;     // Distance between gNb
 
-    // UE Position
+    // UE Info and position
     uint16_t ueNumPergNb = 1;   // Numbers of User per RB
+    uint32_t ueSysIDbase = 2000; // UE System ID base (every UE starts from this)
     double ueDistance = .50;    //Distance between UE
     double xUE=30;  //Initial X Position UE
     double yUE=10;  //Initial Y Position UE
@@ -170,7 +176,11 @@ int main(int argc, char* argv[]) {
         // LogComponentEnable ("UdpServer", LOG_LEVEL_INFO);
         // LogComponentEnable ("LteRlcUm", LOG_LEVEL_LOGIC);
         // LogComponentEnable ("LtePdcp", LOG_LEVEL_INFO);
-        LogComponentEnable("NrUePhy", LOG_ALL);
+        // LogComponentEnable("NrMacSchedulerCQIManagement", LOG_INFO);
+        // LogComponentEnable("NrUePhy", LOG_FUNCTION);
+        // LogComponentEnable("NrGnbPhy", LOG_FUNCTION);
+        // LogComponentEnable("NrAmc", LOG_FUNCTION);
+        //LogComponentEnable("NrMacSchedulerCQIManagement", LOG_FUNCTION);
     }
 
     #pragma endregion logs
@@ -273,15 +283,15 @@ int main(int argc, char* argv[]) {
 
     NodeContainer gnbNodes;
     NodeContainer ueNodes;
-    gnbNodes.Create(gNbNum);
-    ueNodes.Create(gNbNum*ueNumPergNb);
+    gnbNodes.Create(gNbNum, gNbSysIDbase);
+    ueNodes.Create(gNbNum*ueNumPergNb, ueSysIDbase);
 
     // Set position of the base stations
     std::cout << cyan << "Positioning Nodes" << clear << std::endl;
     Ptr<ListPositionAllocator> enbPositionAlloc = CreateObject<ListPositionAllocator>();
     for (uint32_t u = 0; u < gnbNodes.GetN(); ++u)
     {
-        std::cout << "Node ID " << gnbNodes.Get (u)->GetId() <<  std::endl;
+        std::cout << "Node ID " << gnbNodes.Get (u)->GetId() << " Sys ID:" << gnbNodes.Get(u)->GetSystemId() + u << std::endl;
         std::cout << "gNb: " << u << "\t" << "(" << gNbX << "," << gNbY+gNbD*u <<")" << std::endl;
         enbPositionAlloc->Add(Vector(gNbX, gNbY+gNbD*u, hBS));
     }
@@ -301,6 +311,7 @@ int main(int argc, char* argv[]) {
     if (mobility==false){
         speed=0;
     }
+ 
     // Set Initial Position of UE
     for (uint32_t u = 0; u < ueNodes.GetN(); ++u)
     {
@@ -456,8 +467,12 @@ int main(int argc, char* argv[]) {
         Ptr<NrUePhy> uePhy = nrHelper->GetUePhy(ueNetDev.Get(0), 0);
 
         uePhy->SetNoiseFigure(NOISE_MEAN);
-        Config::ConnectWithoutContext("/NodeList/*/DeviceList/*/ComponentCarrierMapUe/*/NrUePhy/DlDataSinr",
-                        MakeBoundCallback(&AddRandomNoise, uePhy));
+
+        for (int i = 0; i < Seconds(simTime) / timeRes; i++)
+        {
+            Simulator::Schedule(timeRes * i, &AddRandomNoise, uePhy);
+        }
+
     }
 
     // When all the configuration is done, explicitly call UpdateConfig ()
@@ -484,7 +499,6 @@ int main(int argc, char* argv[]) {
     Ptr<Node> remoteHost = remoteHostContainer.Get(0);
     InternetStackHelper internet;
     internet.Install(remoteHostContainer);
-
 
     // connect a remoteHost to pgw. Setup routing too
     PointToPointHelper p2ph;
@@ -558,8 +572,6 @@ int main(int argc, char* argv[]) {
             auto start = AppStartTime + 0.01 * u;
             auto end = std::max (start + 1., simTime - start);
 
-            
-
             // InstallTCP (remoteHostContainer.Get (0), ueNodes.Get (u), sinkPort++, start, end);
             InstallTCP2 (remoteHostContainer.Get (0), ueNodes.Get (u), sinkPort++, start, end, dataRate);
 
@@ -630,7 +642,6 @@ int main(int argc, char* argv[]) {
     inif << "cqiHighGain = " << cqiHighGain << std::endl;
     inif << "ProbeCqiDuration = " << ProbeCqiDuration << std::endl;
     inif << "addNoise = " << addNoise << std::endl;
-    
 
     inif << std::endl;
     inif << "[gNb]" << std::endl;
@@ -858,7 +869,7 @@ TraceTcp(uint32_t nodeId, uint32_t socketId)
 
 /**
  * InstallTCP2
- * Instala la aplicaciión "MyApp" en los nodos remoteHost, sender.
+ * Instala la aplicación "MyApp" en los nodos remoteHost, sender.
  */
 static void InstallTCP2 (Ptr<Node> remoteHost,
                         Ptr<Node> sender,
@@ -876,7 +887,7 @@ static void InstallTCP2 (Ptr<Node> remoteHost,
 
     Ptr<Socket> ns3TcpSocket = Socket::CreateSocket (remoteHost, TcpSocketFactory::GetTypeId ());
     Ptr<MyApp> app = CreateObject<MyApp> ();
-    app->Setup (ns3TcpSocket, sinkAddress, SEGMENT_SIZE, 1000000000, DataRate (std::to_string(dataRate) + "Mb/s"));
+    app->Setup (ns3TcpSocket, sinkAddress, SEGMENT_SIZE, 0xFFFFFFFF, DataRate (std::to_string(dataRate) + "Mb/s"));
 
     remoteHost->AddApplication (app);
 
@@ -931,8 +942,8 @@ CalculatePosition(NodeContainer* ueNodes, NodeContainer* gnbNodes, std::ostream*
  *                  MakeBoundCallback(&AddRandomNoise, uePhy))
  * 
 */
-static void AddRandomNoise(Ptr<NrPhy> ue_phy, uint16_t a, uint16_t b, double c, uint16_t d, uint8_t e) {
-
+static void AddRandomNoise(Ptr<NrPhy> ue_phy)
+{
     Ptr<NormalRandomVariable> awgn = CreateObject<NormalRandomVariable>();
     awgn->SetAttribute("Mean", DoubleValue(NOISE_MEAN));
     awgn->SetAttribute("Variance", DoubleValue(NOISE_VAR));
