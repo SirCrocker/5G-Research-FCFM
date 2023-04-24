@@ -315,7 +315,7 @@ thrtx=thrtx.set_index('Time')
 thrtx.groupby(['rnti'])['throughput'].plot()
 ax.set_xlabel("Time [s]")
 ax.set_ylabel("throughput(Mb/s)")
-ax.set_ylim([0 , max([thr_limit ,thrtx['throughput'].max()*1.1])])
+ax.set_ylim([0 , thrtx['throughput'].max()*1.1])
 plt.suptitle(title)
 plt.title(subtitle)
 
