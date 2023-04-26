@@ -33,10 +33,10 @@ NS_LOG_COMPONENT_DEFINE("ProbeCqiSimulation");
 auto tic = std::chrono::high_resolution_clock::now();       // Initial time
 auto itime = std::chrono::high_resolution_clock::now();     // Initial time 2
 double simTime = 7;            // in seconds
-Time timeRes = MilliSeconds(10); // Time to schedule the add noise function
+Time timeRes = MilliSeconds(15); // Time to schedule the add noise function
 
 /* Noise vars */
-const double NOISE_MEAN = 18;    // Default value is 5
+const double NOISE_MEAN = 25;    // Default value is 5
 const double NOISE_VAR = 2;     // Noise variance
 const double NOISE_BOUND = 10;   // Noise bound, read NormalDistribution for info about the parameter.
 
@@ -57,6 +57,7 @@ static void TraceTcp(uint32_t nodeId, uint32_t socketId);
 static void InstallTCP2 (Ptr<Node> remoteHost, Ptr<Node> sender, uint16_t sinkPort, float startTime, float stopTime, float dataRate);
 static void CalculatePosition(NodeContainer* ueNodes, NodeContainer* gnbNodes, std::ostream* os);
 static void AddRandomNoise(Ptr<NrPhy> ue_phy);
+static void PrintNodeAddressInfo(bool ignore_localh);
 
 
 int main(int argc, char* argv[]) {
@@ -94,14 +95,14 @@ int main(int argc, char* argv[]) {
 
     // RB Info and position
     uint16_t gNbNum = 1;    // Numbers of RB
-    uint32_t gNbSysIDbase = 1000; // gNb System ID base (every gNb starts from this)
+    uint32_t gNbSysIDbase = 0x2D424E47; // gNb System ID base (every gNb starts from this)
     double gNbX = 50.0;     // X position
     double gNbY = 50.0;     // Y position
     uint16_t gNbD = 80;     // Distance between gNb
 
     // UE Info and position
     uint16_t ueNumPergNb = 1;   // Numbers of User per RB
-    uint32_t ueSysIDbase = 2000; // UE System ID base (every UE starts from this)
+    uint32_t ueSysIDbase = 0x2D2D4555; // UE System ID base (every UE starts from this)
     double ueDistance = .50;    //Distance between UE
     double xUE=30;  //Initial X Position UE
     double yUE=10;  //Initial Y Position UE
@@ -216,16 +217,16 @@ int main(int argc, char* argv[]) {
     if (flowType =="TCP"){
         Config::SetDefault("ns3::TcpL4Protocol::SocketType", StringValue("ns3::" + tcpTypeId));
         Config::SetDefault("ns3::TcpSocket::SndBufSize", UintegerValue(4194304)); // TcpSocket maximum transmit buffer size (bytes). 4194304 = 4MB
-        Config::SetDefault("ns3::TcpSocket::RcvBufSize", UintegerValue(4194304)); // TcpSocket maximum receive buffer size (bytes). 6291456 = 6MB
+        Config::SetDefault("ns3::TcpSocket::RcvBufSize", UintegerValue(6291456)); // TcpSocket maximum receive buffer size (bytes). 6291456 = 6MB
         Config::SetDefault("ns3::TcpSocket::InitialCwnd", UintegerValue(10)); // TCP initial congestion window size (segments). RFC 5681 = 10
         Config::SetDefault("ns3::TcpSocket::SegmentSize", UintegerValue(SEGMENT_SIZE)); // TCP maximum segment size in bytes (may be adjusted based on MTU discovery).
         Config::SetDefault("ns3::TcpSocket::TcpNoDelay", BooleanValue(false)); // Set to true to disable Nagle's algorithm
 
         // Config::SetDefault("ns3::TcpSocketBase::MinRto", TimeValue (MilliSeconds (200)));
         Config::SetDefault("ns3::TcpSocket::DelAckCount", UintegerValue(delAckCount));  // Number of packets to wait before sending a TCP ack
-        Config::SetDefault("ns3::TcpSocket::DelAckTimeout", TimeValue (Seconds (.4))); // Timeout value for TCP delayed acks, in seconds. default 0.2 sec
-        Config::SetDefault("ns3::TcpSocket::DataRetries", UintegerValue(100)); // Number of data retransmission attempts. Default 6
-        Config::SetDefault("ns3::TcpSocket::PersistTimeout", TimeValue (Seconds (10))); // Number of data retransmission attempts. Default 6
+        Config::SetDefault("ns3::TcpSocket::DelAckTimeout", TimeValue (Seconds (.2))); // Timeout value for TCP delayed acks, in seconds. default 0.2 sec
+        Config::SetDefault("ns3::TcpSocket::DataRetries", UintegerValue(6)); // Number of data retransmission attempts. Default 6
+        Config::SetDefault("ns3::TcpSocket::PersistTimeout", TimeValue (Seconds (2))); // Number of data retransmission attempts. Default 6
 
         Config::Set ("/NodeList/*/DeviceList/*/TxQueue/MaxSize",  QueueSizeValue(QueueSize ("100p")));
         Config::Set ("/NodeList/*/DeviceList/*/RxQueue/MaxSize",  QueueSizeValue(QueueSize ("100p")));
@@ -248,64 +249,6 @@ int main(int argc, char* argv[]) {
     }
     else{
         // TCPTrace=false;
-    }
-
-
-    /**
-     * Default values for the simulation. We are progressively removing all
-     * the instances of SetDefault, but we need it for legacy code (LTE)
-     */
-    Config::SetDefault("ns3::LteRlcUm::MaxTxBufferSize", UintegerValue(rlcBuffer));
-
-    // set mobile device and base station antenna heights in meters, according to the chosen
-    // scenario
-    if (scenario == "UMa")
-    {
-        hBS = 25;
-        hUE = 1.5;
-        if (enableBuildings)
-        {
-            scenarioEnum = BandwidthPartInfo::UMa_Buildings;
-        }
-        else{
-            scenarioEnum = BandwidthPartInfo::UMa;
-        }
-
-    
-    }
-    else
-    {
-        NS_ABORT_MSG("Scenario not supported. Choose among 'RMa', 'UMa', 'UMi-StreetCanyon', "
-                     "'InH-OfficeMixed', and 'InH-OfficeOpen'.");
-    }
-    
-    
-    /**
-     * Default values for the simulation. We are progressively removing all
-     * the instances of SetDefault, but we need it for legacy code (LTE)
-     */
-    Config::SetDefault("ns3::LteRlcUm::MaxTxBufferSize", UintegerValue(rlcBuffer));
-
-    // set mobile device and base station antenna heights in meters, according to the chosen
-    // scenario
-    if (scenario == "UMa")
-    {
-        hBS = 25;
-        hUE = 1.5;
-        if (enableBuildings)
-        {
-            scenarioEnum = BandwidthPartInfo::UMa_Buildings;
-        }
-        else{
-            scenarioEnum = BandwidthPartInfo::UMa;
-        }
-
-    
-    }
-    else
-    {
-        NS_ABORT_MSG("Scenario not supported. Choose among 'RMa', 'UMa', 'UMi-StreetCanyon', "
-                     "'InH-OfficeMixed', and 'InH-OfficeOpen'.");
     }
     
     #pragma endregion sv_tcp_scenario
@@ -461,9 +404,6 @@ int main(int argc, char* argv[]) {
                                                    scenarioEnum);
     OperationBandInfo band = ccBwpCreator.CreateOperationBandContiguousCc(bandConf);
 
-     // Initialize channel and pathloss, plus other things inside band.
-     // Initialize channel and pathloss, plus other things inside band.
-     
     // Initialize channel and pathloss, plus other things inside band.
      
     Config::SetDefault("ns3::ThreeGppChannelModel::UpdatePeriod", TimeValue(MilliSeconds(0)));
@@ -559,8 +499,10 @@ int main(int argc, char* argv[]) {
     // Create the internet and install the IP stack on the UEs
     // Get SGW/PGW and create a single RemoteHost
     Ptr<Node> pgw = epcHelper->GetPgwNode();
+    epcHelper->GetSgwNode()->SetAttribute("SystemId", UintegerValue(0x2D574753)); // Set a Sys Id for the SGW Node
+    pgw->SetAttribute("SystemId", UintegerValue(0x2D574750));
     NodeContainer remoteHostContainer;
-    remoteHostContainer.Create(1);
+    remoteHostContainer.Create(1, 0x2D2D4852);
     Ptr<Node> remoteHost = remoteHostContainer.Get(0);
     InternetStackHelper internet;
     internet.Install(remoteHostContainer);
@@ -729,28 +671,8 @@ int main(int argc, char* argv[]) {
     inif << "buildLy = " << buildLy << std::endl;
     inif.close();
 
-    std::clog << "Debug info" << std::endl;
-    Ipv4Address addr;
-    for (uint8_t u = 0; u < ueNodes.GetN(); ++u) 
-    {   
-        uint32_t id = ueNodes.Get(u)->GetId();
-        addr = ueNodes.Get(u)->GetObject<Ipv4>()->GetAddress(1, 0).GetAddress();
-        std::clog << "\t UE ids: " << id << " addr: " << addr << std::endl;
-    }
+    PrintNodeAddressInfo(true);
 
-    for (uint8_t u = 0; u < gnbNodes.GetN(); ++u) 
-    {   
-        uint32_t id = gnbNodes.Get(u)->GetId();
-        addr = gnbNodes.Get(u)->GetObject<Ipv4>()->GetAddress(1, 0).GetAddress();
-        std::clog << "\t GNB ids: " << id << " addr: " << addr << std::endl;
-    }
-
-    addr = remoteHost->GetObject<Ipv4>()->GetAddress(1, 0).GetAddress();
-    std::clog << "\t RH ids: " << remoteHost->GetId() << " addr: " << addr << std::endl;
-
-    addr = pgw->GetObject<Ipv4>()->GetAddress(1, 0).GetAddress();
-    std::clog << "\t PGW  ids: " << pgw->GetId() << " addr: " << addr << std::endl;
-    // TODO: Imprimir nodos con sus sysid y netdevices
     #pragma endregion trace_n_files
 
     Simulator::Stop(Seconds(simTime));
@@ -1045,6 +967,49 @@ static void AddRandomNoise(Ptr<NrPhy> ue_phy)
                         ue_phy,
                         awgn->GetValue()); // Default ns3 noise: 5 dB
     */
+}
+
+/**
+ * Prints info about the nodes, including:
+ *  - SystemID (it assumed that 32uint_t <=> 4 chars)
+ *  - NodeID
+ *  - NetDevices ID
+ *  - Address of each NetDevice
+ * 
+ * \param ignore_localh     if it ignores the LocalHost Adresses
+*/
+static void PrintNodeAddressInfo(bool ignore_localh)
+{
+    std::clog << "Debug info" << std::endl;
+    if (ignore_localh) 
+    {
+        std::clog << "\tLocalhosts addresses were excluded." << std::endl;
+    }
+
+    for (uint8_t u = 0; u < NodeList::GetNNodes(); ++u) 
+    {   
+        Ptr<Node> node = NodeList::GetNode(u);
+        uint32_t id = node->GetId();
+        uint32_t sysid = node->GetSystemId();
+        Ptr<Ipv4> node_ip = node->GetObject<Ipv4>();
+        uint32_t ieN = node_ip->GetNInterfaces();  // interface number
+
+        uint8_t a = (uint8_t)ignore_localh;     // Asumes that the 1st interface is localhost
+        for (; a < ieN; ++a)
+        {   
+            uint32_t num_address = node_ip->GetNAddresses(a);
+
+            for (uint8_t b = 0; b < num_address; b++)
+            {
+                Ipv4Address IeAddres = node_ip->GetAddress(a, b).GetAddress();
+                std::clog << "\t " << (uint8_t)sysid << (uint8_t)(sysid >> 8) << (uint8_t)(sysid >> 16) << (uint8_t)(sysid >> 24)
+                          << " id: " << id << " netdevice: " << +a << " addr: " << IeAddres << std::endl;
+            }
+
+            
+        }
+        
+    }
 }
 
 #pragma endregion trace_n_utils_functions
