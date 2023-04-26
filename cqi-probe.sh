@@ -13,6 +13,8 @@ tcpTypeId='TcpNewReno'
 cqiHighGain=2
 mobilityVal=0
 build_ns3=1
+pass_through=""
+custom_name=""
 
 helpFunction()
 {
@@ -24,10 +26,12 @@ helpFunction()
    echo -e "\t-r RLC Buffer BDP Percentage 10 o 100"
    echo -e "\t-m Mobility 1 or 0"
    echo -e "\t-b Select if ns3 builds or not, default 1"
+   echo -e "\t-p Pass through commands to the simulation, args must be inside quotes (\"{arg}\")"
+   echo -e "\t-c Custom folder name for the simulation data"
    exit 1 # Exit script after printing help
 }
 
-while getopts "t:r:s:m:b:" opt
+while getopts "t:r:s:m:b:p:c:" opt
 do
    case "$opt" in
       g ) cqiHighGain="$OPTARG" ;;
@@ -36,9 +40,12 @@ do
       r ) rlcBufferPer="$OPTARG" ;;
       m ) mobilityVal="$OPTARG" ;;
       b ) build_ns3="$OPTARG" ;;
+      p ) pass_through="$OPTARG" ;;
+      c ) custom_name="$OPTARG" ;;
       ? ) helpFunction ;; # Print helpFunction in case parameter is non-existent
    esac
 done
+
 # Validations
 if [ "$serverType" != "Remote" ] && [ "$serverType" != "Edge" ]
 then
@@ -94,7 +101,16 @@ echo
 
 #backup run-sim and cc
 outfolder="${RUTA_PROBE}/out"
-bkfolder=$cqiHighGain"-"$tcpTypeId"-"$servertag"-"$buffertag"-"`date +%Y%m%d%H%M`
+
+oldname_path=""
+if ([ "$custom_name" == "" ] || [[ $custom_name = *" "* ]])
+then
+   bkfolder=$cqiHighGain"-"$tcpTypeId"-"$servertag"-"$buffertag"-"`date +%Y%m%d%H%M`
+else
+   bkfolder=$custom_name
+   oldname_path=$outfolder/$bkfolder/$cqiHighGain"-"$tcpTypeId"-"$servertag"-"$buffertag"-"`date +%Y%m%d%H%M`".oldname"
+fi
+
 me=`basename "$0"`
 
 if [ ! -d "$outfolder" ];
@@ -105,6 +121,12 @@ fi
 if [ ! -d "$outfolder/$bkfolder" ];
 then
 	mkdir $outfolder/$bkfolder
+
+   if [[ $oldname_path != "" ]]
+   then
+      touch $oldname_path
+   fi
+
 fi
 
 cp $me $outfolder/$bkfolder/$me.txt
@@ -119,6 +141,7 @@ cp "${RUTA_PROBE}/graph.py" $outfolder/$bkfolder/graph.py.txt
     --rlcBufferPerc=`echo $rlcBufferPer`
     --cqiHighGain=`echo $cqiHighGain`
     --mobility=`echo $mobilityVal`
+   `echo $pass_through`
     " --cwd `echo $outfolder/$bkfolder` --no-build
 
 echo "Destination folder name: $bkfolder"
