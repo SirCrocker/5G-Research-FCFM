@@ -33,12 +33,12 @@ NS_LOG_COMPONENT_DEFINE("ProbeCqiSimulation");
 auto tic = std::chrono::high_resolution_clock::now();       // Initial time
 auto itime = std::chrono::high_resolution_clock::now();     // Initial time 2
 double simTime = 7;            // in seconds
-Time timeRes = MilliSeconds(5); // Time to schedule the add noise function
+Time timeRes = MilliSeconds(10); // Time to schedule the add noise function
 
 /* Noise vars */
-const double NOISE_MEAN = 17;    // Default value is 5
+const double NOISE_MEAN = 18;    // Default value is 5
 const double NOISE_VAR = 2;     // Noise variance
-const double NOISE_BOUND = 3;   // Noise bound, read NormalDistribution for info about the parameter.
+const double NOISE_BOUND = 10;   // Noise bound, read NormalDistribution for info about the parameter.
 
 const double SEGMENT_SIZE = 1448.0;   // Maximum number of bits a packet can have
 const std::string LOG_FILENAME = "output.log";
@@ -69,14 +69,14 @@ int main(int argc, char* argv[]) {
     bool logging = true;    // whether to enable logging from the simulation, another option is by
                             // exporting the NS_LOG environment variable
     bool shadowing = true;  // to enable shadowing effect
-    bool addNoise = true;  // To enable/disable added noise to the channel
+    bool addNoise = true;  // To enable/disable AWGN
 
     double hBS;          // base station antenna height in meters
     double hUE;          // user antenna height in meters
     double txPower = 40; // txPower
     uint16_t numerology = 3;        // 120 kHz and 125 microseg
     std::string scenario = "UMa";   // scenario
-    enum BandwidthPartInfo::Scenario scenarioEnum = BandwidthPartInfo::UMa;
+    BandwidthPartInfo::Scenario scenarioEnum = BandwidthPartInfo::UMa;
 
     double dataRate = 100;      //Mbps
     double serverDelay = 0.01;  // remote 0.040 ; edge 0.004
@@ -180,7 +180,8 @@ int main(int argc, char* argv[]) {
         // LogComponentEnable("NrUePhy", LOG_FUNCTION);
         // LogComponentEnable("NrGnbPhy", LOG_FUNCTION);
         // LogComponentEnable("NrAmc", LOG_FUNCTION);
-        //LogComponentEnable("NrMacSchedulerCQIManagement", LOG_FUNCTION);
+        // LogComponentEnable("NrMacSchedulerCQIManagement", LOG_FUNCTION);
+        // LogComponentEnable("MyAppComp", LOG_DEBUG);
     }
 
     #pragma endregion logs
@@ -199,6 +200,11 @@ int main(int argc, char* argv[]) {
         serverDelay = 0.004;
     }
     rlcBuffer = round(dataRate*1e6/8*serverDelay*rlcBufferPerc/100); // Bytes BDP=250Mbps*100ms default: 999999999
+    /**
+     * Default values for the simulation. We are progressively removing all
+     * the instances of SetDefault, but we need it for legacy code (LTE)
+     */
+    Config::SetDefault("ns3::LteRlcUm::MaxTxBufferSize", UintegerValue(rlcBuffer));
 
     // TCP config
     // TCP Setting
@@ -214,7 +220,6 @@ int main(int argc, char* argv[]) {
         Config::SetDefault("ns3::TcpSocket::InitialCwnd", UintegerValue(10)); // TCP initial congestion window size (segments). RFC 5681 = 10
         Config::SetDefault("ns3::TcpSocket::SegmentSize", UintegerValue(SEGMENT_SIZE)); // TCP maximum segment size in bytes (may be adjusted based on MTU discovery).
         Config::SetDefault("ns3::TcpSocket::TcpNoDelay", BooleanValue(false)); // Set to true to disable Nagle's algorithm
-
 
         // Config::SetDefault("ns3::TcpSocketBase::MinRto", TimeValue (MilliSeconds (200)));
         Config::SetDefault("ns3::TcpSocket::DelAckCount", UintegerValue(delAckCount));  // Number of packets to wait before sending a TCP ack
@@ -245,6 +250,36 @@ int main(int argc, char* argv[]) {
         // TCPTrace=false;
     }
 
+
+    /**
+     * Default values for the simulation. We are progressively removing all
+     * the instances of SetDefault, but we need it for legacy code (LTE)
+     */
+    Config::SetDefault("ns3::LteRlcUm::MaxTxBufferSize", UintegerValue(rlcBuffer));
+
+    // set mobile device and base station antenna heights in meters, according to the chosen
+    // scenario
+    if (scenario == "UMa")
+    {
+        hBS = 25;
+        hUE = 1.5;
+        if (enableBuildings)
+        {
+            scenarioEnum = BandwidthPartInfo::UMa_Buildings;
+        }
+        else{
+            scenarioEnum = BandwidthPartInfo::UMa;
+        }
+
+    
+    }
+    else
+    {
+        NS_ABORT_MSG("Scenario not supported. Choose among 'RMa', 'UMa', 'UMi-StreetCanyon', "
+                     "'InH-OfficeMixed', and 'InH-OfficeOpen'.");
+    }
+    
+    
     /**
      * Default values for the simulation. We are progressively removing all
      * the instances of SetDefault, but we need it for legacy code (LTE)
@@ -284,20 +319,29 @@ int main(int argc, char* argv[]) {
     NodeContainer gnbNodes;
     NodeContainer ueNodes;
     gnbNodes.Create(gNbNum, gNbSysIDbase);
-    ueNodes.Create(gNbNum*ueNumPergNb, ueSysIDbase);
+    ueNodes.Create(gNbNum * ueNumPergNb, ueSysIDbase);
+
+    // set mobile device and base station antenna heights in meters, according to the chosen scenario
+    if (scenario == "UMa") {
+        hBS = 25;
+        hUE = 1.5;
+
+    } else {
+        NS_ABORT_MSG("Scenario not supported. Only UMa is currently supported");
+    }
 
     // Set position of the base stations
     std::cout << cyan << "Positioning Nodes" << clear << std::endl;
-    Ptr<ListPositionAllocator> enbPositionAlloc = CreateObject<ListPositionAllocator>();
+    Ptr<ListPositionAllocator> gnbPositionAlloc = CreateObject<ListPositionAllocator>();
     for (uint32_t u = 0; u < gnbNodes.GetN(); ++u)
     {
         std::cout << "Node ID " << gnbNodes.Get (u)->GetId() << " Sys ID:" << gnbNodes.Get(u)->GetSystemId() + u << std::endl;
         std::cout << "gNb: " << u << "\t" << "(" << gNbX << "," << gNbY+gNbD*u <<")" << std::endl;
-        enbPositionAlloc->Add(Vector(gNbX, gNbY+gNbD*u, hBS));
+        gnbPositionAlloc->Add(Vector(gNbX, gNbY+gNbD*u, hBS));
     }
     MobilityHelper enbmobility;
     enbmobility.SetMobilityModel("ns3::ConstantPositionMobilityModel");
-    enbmobility.SetPositionAllocator(enbPositionAlloc);
+    enbmobility.SetPositionAllocator(gnbPositionAlloc);
     enbmobility.Install(gnbNodes);
 
     // position the mobile terminals and enable the mobility
@@ -306,7 +350,6 @@ int main(int argc, char* argv[]) {
     // uemobility.SetMobilityModel("ns3::RandomDirection2dMobilityModel","Bounds", RectangleValue(Rectangle(x_min, x_max, y_min, y_max)));
     // uemobility.SetMobilityModel("ns3::WaypointMobilityModel");
     uemobility.Install(ueNodes);
-
 
     if (mobility==false){
         speed=0;
@@ -364,23 +407,41 @@ int main(int argc, char* argv[]) {
     }
 
     /********************************************************************************************************************
-     * NR Stuff
+     * NR Helpers and Stuff
      ********************************************************************************************************************/
     #pragma region NR_Config
+    
     /**
-     * Create NR simulation helpers
+     * Setup the NR module. We create the various helpers needed for the
+     * NR simulation:
+     * - EpcHelper, which will setup the core network
+     * - IdealBeamformingHelper, which takes care of the beamforming part
+     * - NrHelper, which takes care of creating and connecting the various
+     * part of the NR stack
      */
     Ptr<NrPointToPointEpcHelper> epcHelper = CreateObject<NrPointToPointEpcHelper>();
     Ptr<IdealBeamformingHelper> idealBeamformingHelper = CreateObject<IdealBeamformingHelper>();
-
     Ptr<NrHelper> nrHelper = CreateObject<NrHelper>();
+
+    // Configure ideal beamforming method
+    idealBeamformingHelper->SetAttribute("BeamformingMethod",
+                                         TypeIdValue(DirectPathBeamforming::GetTypeId()));// dir at gNB, dir at UE
+
     nrHelper->SetBeamformingHelper(idealBeamformingHelper);
     nrHelper->SetEpcHelper(epcHelper);
     
     /**
      * Spectrum configuration. We create a single operational band and configure the scenario.
      */
-    BandwidthPartInfoPtrVector allBwps;
+
+    // Setup scenario depending if there are buildings or not
+    if (enableBuildings)
+    {
+        scenarioEnum = BandwidthPartInfo::UMa_Buildings;
+    } else {
+        scenarioEnum = BandwidthPartInfo::UMa;
+    }
+
     CcBwpCreator ccBwpCreator;
     const uint8_t numCcPerBand = 1; // in this example we have a single band, and that band is
                                     // composed of a single component carrier
@@ -401,9 +462,14 @@ int main(int argc, char* argv[]) {
     OperationBandInfo band = ccBwpCreator.CreateOperationBandContiguousCc(bandConf);
 
      // Initialize channel and pathloss, plus other things inside band.
+     // Initialize channel and pathloss, plus other things inside band.
+     
+    // Initialize channel and pathloss, plus other things inside band.
      
     Config::SetDefault("ns3::ThreeGppChannelModel::UpdatePeriod", TimeValue(MilliSeconds(0)));
+    
     std::string errorModel = "ns3::NrEesmIrT1"; //ns3::NrEesmCcT1, ns3::NrEesmCcT2, ns3::NrEesmIrT1, ns3::NrEesmIrT2, ns3::NrLteMiErrorModel
+    
     Config::SetDefault("ns3::NrAmc::ErrorModelType", TypeIdValue(TypeId::LookupByName(errorModel)));
     Config::SetDefault("ns3::NrAmc::AmcModel", EnumValue(NrAmc::ErrorModel)); // NrAmc::ShannonModel // NrAmc::ErrorModel
     //we need activate? : "ns3::BuildingsChannelConditionModel"
@@ -421,18 +487,12 @@ int main(int argc, char* argv[]) {
     propagationLossModel->SetAttribute("ShadowSigmaExtWalls", DoubleValue(5.0)); // Standard deviation of the normal distribution used for calculate the shadowing due to ext walls
     propagationLossModel->SetAttribute("InternalWallLoss", DoubleValue(5.7)); // Additional loss for each internal wall [dB]
 
-
     // Initialize channel and pathloss, plus other things inside band.
     nrHelper->InitializeOperationBand(&band);
-    allBwps = CcBwpCreator::GetAllBwps({band});
-
-    // Configure ideal beamforming method
-    idealBeamformingHelper->SetAttribute("BeamformingMethod",
-                                         TypeIdValue(DirectPathBeamforming::GetTypeId()));// dir at gNB, dir at UE
+    BandwidthPartInfoPtrVector allBwps = CcBwpCreator::GetAllBwps({band});
 
     // Configure scheduler
     nrHelper->SetSchedulerTypeId(NrMacSchedulerTdmaRR::GetTypeId());
-
 
     // Antennas for the UEs
     nrHelper->SetUeAntennaAttribute("NumRows", UintegerValue(2));
@@ -465,15 +525,19 @@ int main(int argc, char* argv[]) {
     {   
         // Get the physical layer and add noise whenerver DlDataSinr is executed
         Ptr<NrUePhy> uePhy = nrHelper->GetUePhy(ueNetDev.Get(0), 0);
-
         uePhy->SetNoiseFigure(NOISE_MEAN);
 
-        for (int i = 0; i < Seconds(simTime) / timeRes; i++)
+        for (int i = 0; i < (Seconds(simTime) - Seconds(0.2)) / timeRes; i++)
         {
-            Simulator::Schedule(timeRes * i, &AddRandomNoise, uePhy);
+            Simulator::Schedule(timeRes * i + Seconds(0.1), &AddRandomNoise, uePhy);
         }
-
     }
+
+    /*
+    Ptr<RateErrorModel> em = CreateObject<RateErrorModel>();
+    em->SetAttribute("ErrorRate", DoubleValue(0.00001));
+    devices.Get(1)->SetAttribute("ReceiveErrorModel", PointerValue(em));
+    */
 
     // When all the configuration is done, explicitly call UpdateConfig ()
     for (auto it = enbNetDev.Begin(); it != enbNetDev.End(); ++it)
@@ -491,8 +555,9 @@ int main(int argc, char* argv[]) {
      * Setup and install IP, internet and remote servers
      ********************************************************************************************************************/
     #pragma region internet
-    // create the internet and install the IP stack on the UEs
-    // get SGW/PGW and create a single RemoteHost
+    
+    // Create the internet and install the IP stack on the UEs
+    // Get SGW/PGW and create a single RemoteHost
     Ptr<Node> pgw = epcHelper->GetPgwNode();
     NodeContainer remoteHostContainer;
     remoteHostContainer.Create(1);
@@ -505,6 +570,7 @@ int main(int argc, char* argv[]) {
     p2ph.SetDeviceAttribute("DataRate", DataRateValue(DataRate("100Gb/s")));
     p2ph.SetDeviceAttribute("Mtu", UintegerValue(1500)); //2500
     p2ph.SetChannelAttribute("Delay", TimeValue(Seconds(serverDelay)));
+    p2ph.EnablePcapAll("mypcapfile");
     NetDeviceContainer internetDevices = p2ph.Install(pgw, remoteHost);
 
     Ipv4AddressHelper ipv4h;
@@ -518,10 +584,7 @@ int main(int argc, char* argv[]) {
     internet.Install(ueNodes);
 
     Ipv4InterfaceContainer ueIpIface;
-    ueIpIface = epcHelper->AssignUeIpv4Address(NetDeviceContainer(ueNetDev));
-
-    // attach UEs to the closest eNB
-    nrHelper->AttachToClosestEnb(ueNetDev, enbNetDev);
+    ueIpIface = epcHelper->AssignUeIpv4Address(ueNetDev);
 
     // assign IP address to UEs
     for (uint32_t u = 0; u < ueNodes.GetN(); ++u)
@@ -533,7 +596,10 @@ int main(int argc, char* argv[]) {
         ueStaticRouting->SetDefaultRoute(epcHelper->GetUeDefaultGatewayAddress(), 1);
     }
 
+    // attach UEs to the closest eNB
+    nrHelper->AttachToClosestEnb(ueNetDev, enbNetDev);
 
+    // Flow type properties and setup
     if ( flowType == "UDP")
     {
         std::cout << "App:" << flowType << std::endl;
@@ -663,6 +729,28 @@ int main(int argc, char* argv[]) {
     inif << "buildLy = " << buildLy << std::endl;
     inif.close();
 
+    std::clog << "Debug info" << std::endl;
+    Ipv4Address addr;
+    for (uint8_t u = 0; u < ueNodes.GetN(); ++u) 
+    {   
+        uint32_t id = ueNodes.Get(u)->GetId();
+        addr = ueNodes.Get(u)->GetObject<Ipv4>()->GetAddress(1, 0).GetAddress();
+        std::clog << "\t UE ids: " << id << " addr: " << addr << std::endl;
+    }
+
+    for (uint8_t u = 0; u < gnbNodes.GetN(); ++u) 
+    {   
+        uint32_t id = gnbNodes.Get(u)->GetId();
+        addr = gnbNodes.Get(u)->GetObject<Ipv4>()->GetAddress(1, 0).GetAddress();
+        std::clog << "\t GNB ids: " << id << " addr: " << addr << std::endl;
+    }
+
+    addr = remoteHost->GetObject<Ipv4>()->GetAddress(1, 0).GetAddress();
+    std::clog << "\t RH ids: " << remoteHost->GetId() << " addr: " << addr << std::endl;
+
+    addr = pgw->GetObject<Ipv4>()->GetAddress(1, 0).GetAddress();
+    std::clog << "\t PGW  ids: " << pgw->GetId() << " addr: " << addr << std::endl;
+    // TODO: Imprimir nodos con sus sysid y netdevices
     #pragma endregion trace_n_files
 
     Simulator::Stop(Seconds(simTime));
