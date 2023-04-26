@@ -7,7 +7,8 @@
 
 using namespace ns3;
 
-// TODO: Leer que hace.
+NS_LOG_COMPONENT_DEFINE("MyAppComp");
+
 class MyAppTag : public Tag
 {
 public:
@@ -122,10 +123,10 @@ MyApp::SendPacket (void)
     Ptr<Packet> packet = Create<Packet> (m_packetSize);
     MyAppTag tag (Simulator::Now ());
 
-
     m_socket->Send (packet);
     if (++m_packetsSent < m_nPackets)
     {
+        NS_LOG_DEBUG("Sent a packet at " << Simulator::Now().GetSeconds());
         ScheduleTx ();
     }
     else
