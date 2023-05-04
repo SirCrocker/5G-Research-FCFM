@@ -15,6 +15,7 @@ mobilityVal=0
 build_ns3=1
 pass_through=""
 custom_name=""
+open_folder=0
 
 helpFunction()
 {
@@ -28,10 +29,11 @@ helpFunction()
    echo -e "\t-b Select if ns3 builds or not, default 1"
    echo -e "\t-p Pass through commands to the simulation, args must be inside quotes (\"{arg}\")"
    echo -e "\t-c Custom folder name for the simulation data"
+   echo -e "\t-o Open folder with results at the end of simulation and processing"
    exit 1 # Exit script after printing help
 }
 
-while getopts "t:r:s:m:b:p:c:" opt
+while getopts "t:r:s:m:b:p:c:o:" opt
 do
    case "$opt" in
       g ) cqiHighGain="$OPTARG" ;;
@@ -42,6 +44,7 @@ do
       b ) build_ns3="$OPTARG" ;;
       p ) pass_through="$OPTARG" ;;
       c ) custom_name="$OPTARG" ;;
+      o ) open_folder="$OPTARG" ;;
       ? ) helpFunction ;; # Print helpFunction in case parameter is non-existent
    esac
 done
@@ -159,3 +162,8 @@ python3 "${RUTA_PROBE}/graph.py" $outfolder/$bkfolder $RUTA_PROBE
 
 toc=$(date +%s)
 printf "Simulation Processed in: "${magenta}$(($toc-$tic))${clear}" seconds\n"
+
+if [ "$open_folder" != "0" ]
+then
+   open $outfolder/$bkfolder
+fi
