@@ -9,55 +9,8 @@ using namespace ns3;
 
 NS_LOG_COMPONENT_DEFINE("MyAppComp");
 
-class MyAppTag : public Tag
-{
-public:
-  MyAppTag ()
-  {
-  }
-
-  MyAppTag (Time sendTs) : m_sendTs (sendTs)
-  {
-  }
-
-  static TypeId GetTypeId (void)
-  {
-    static TypeId tid = TypeId ("ns3::MyAppTag")
-      .SetParent<Tag> ()
-      .AddConstructor<MyAppTag> ();
-    return tid;
-  }
-
-  virtual TypeId  GetInstanceTypeId (void) const
-  {
-    return GetTypeId ();
-  }
-
-  virtual void  Serialize (TagBuffer i) const
-  {
-    i.WriteU64 (m_sendTs.GetNanoSeconds ());
-  }
-
-  virtual void  Deserialize (TagBuffer i)
-  {
-    m_sendTs = NanoSeconds (i.ReadU64 ());
-  }
-
-  virtual uint32_t  GetSerializedSize () const
-  {
-    return sizeof (m_sendTs);
-  }
-
-  virtual void Print (std::ostream &os) const
-  {
-    std::cout << m_sendTs;
-  }
-
-  Time m_sendTs;
-};
-
 MyApp::MyApp ()
-  : m_socket (0),
+  : m_socket (nullptr),
     m_peer (),
     m_packetSize (0),
     m_nPackets (0),
@@ -70,7 +23,7 @@ MyApp::MyApp ()
 
 MyApp::~MyApp ()
 {
-  m_socket = 0;
+  m_socket = nullptr;
 }
 
 void
@@ -90,17 +43,18 @@ MyApp::ChangeDataRate (DataRate rate)
 }
 
 void
-MyApp::StartApplication (void)
+MyApp::StartApplication()
 {
   m_running = true;
   m_packetsSent = 0;
   m_socket->Bind ();
-  m_socket->Connect (m_peer);
+  int result = m_socket->Connect (m_peer);
+  std::clog << "App Connect Result " << result << std::endl;
   SendPacket ();
 }
 
 void
-MyApp::StopApplication (void)
+MyApp::StopApplication()
 {
   m_running = false;
 
@@ -118,15 +72,21 @@ MyApp::StopApplication (void)
 }
 
 void
-MyApp::SendPacket (void)
+MyApp::SendPacket()
 {
-    Ptr<Packet> packet = Create<Packet> (m_packetSize);
-    MyAppTag tag (Simulator::Now ());
-
+    Ptr<Packet> packet = Create<Packet>(m_packetSize);
+    //MyAppTag tag (Simulator::Now ());
+    packet->EnablePrinting();
+    // NS_LOG_DEBUG("txBuff before: " << m_socket->GetTxAvailable());
+    NS_LOG_DEBUG("Will send a packet at " << Simulator::Now().GetSeconds());
+    NS_LOG_DEBUG("Packet sent " << packet->ToString());
     m_socket->Send (packet);
+    // NS_LOG_DEBUG("Packet just sent information: ");
+    // packet->Print(std::clog);
+    // NS_LOG_DEBUG(" ");
+    // NS_LOG_DEBUG("txBuff after: " << m_socket->GetTxAvailable());
     if (++m_packetsSent < m_nPackets)
     {
-        NS_LOG_DEBUG("Sent a packet at " << Simulator::Now().GetSeconds());
         ScheduleTx ();
     }
     else
@@ -136,20 +96,17 @@ MyApp::SendPacket (void)
     }
 }
 
-
-
 void
-MyApp::ScheduleTx (void)
+MyApp::ScheduleTx()
 {
   if (m_running)
     {
       Time tNext (Seconds (m_packetSize * 8 / static_cast<double> (m_dataRate.GetBitRate ())));
       m_sendEvent = Simulator::Schedule (tNext, &MyApp::SendPacket, this);
     }
-    else
+  else
     {
-        std::cout  <<  red << "APP STOPPED" << clear << std::endl;
-
+      std::cout  <<  red << "APP STOPPED" << clear << std::endl;
     }
 }
 

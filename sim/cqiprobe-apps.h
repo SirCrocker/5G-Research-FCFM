@@ -8,16 +8,16 @@ class MyApp : public Application
 {
 public:
   MyApp ();
-  virtual ~MyApp ();
+  ~MyApp() override;
   void ChangeDataRate (DataRate rate);
   void Setup (Ptr<Socket> socket, Address address, uint32_t packetSize, uint32_t nPackets, DataRate dataRate);
 
 private:
-  virtual void StartApplication (void);
-  virtual void StopApplication (void);
+  void StartApplication() override;
+  void StopApplication() override;
 
-  void ScheduleTx (void);
-  void SendPacket (void);
+  void ScheduleTx();
+  void SendPacket();
 
   Ptr<Socket>     m_socket;
   Address         m_peer;
