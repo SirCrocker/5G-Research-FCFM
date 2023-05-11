@@ -35,8 +35,15 @@ auto itime = std::chrono::high_resolution_clock::now();     // Initial time 2
 double simTime = 7;            // in seconds
 Time timeRes = MilliSeconds(15); // Time to schedule the add noise function
 
+/* Auxiliary Vars */
+const uint32_t SGW_SYS_ID = 0x2D574753;
+const uint32_t PGW_SYS_ID = 0x2D574750;
+const uint32_t GNB_SYS_ID = 0x2D424E47; // gNb System ID base (every gNb starts from this)
+const uint32_t UE_SYS_ID  = 0x2D2D4555; // UE System ID base (every UE starts from this)
+const uint32_t RH_SYS_ID  = 0x2D2D4852; // RH System ID base
+
 /* Noise vars */
-const double NOISE_MEAN = 25;    // Default value is 5
+const double NOISE_MEAN = 20;    // Default value is 5
 const double NOISE_VAR = 2;     // Noise variance
 const double NOISE_BOUND = 10;   // Noise bound, read NormalDistribution for info about the parameter.
 
@@ -54,7 +61,7 @@ static void SsThreshTracer(Ptr<OutputStreamWrapper> stream, uint32_t oldval, uin
 static void TraceTcp(uint32_t nodeId, uint32_t socketId);
 
 /* Helper functions, definitions are at EOF */
-static void InstallTCP2 (Ptr<Node> remoteHost, Ptr<Node> sender, uint16_t sinkPort, float startTime, float stopTime, float dataRate);
+static void InstallTCP2 (Ptr<Node> remoteHost, Ptr<Node> receiver, uint16_t sinkPort, float startTime, float stopTime, float dataRate);
 static void CalculatePosition(NodeContainer* ueNodes, NodeContainer* gnbNodes, std::ostream* os);
 static void AddRandomNoise(Ptr<NrPhy> ue_phy);
 static void PrintNodeAddressInfo(bool ignore_localh);
@@ -85,8 +92,9 @@ int main(int argc, char* argv[]) {
     double rlcBuffer;           // Se calcula más abajo, según serverType
 
     // CQI Probe own variables.
-    double cqiHighGain = 2;         // Step of CQI probe
-    double ProbeCqiDuration = 200;  // miliseconds
+    uint8_t cqiHighGain = 3;         // Step of CQI probe
+    Time ProbeCqiDuration = MilliSeconds(500);  // miliseconds
+    Time stepFrequency = Seconds(2);
     // double cqiGainCycle[] = {5.0 / 4, 3.0 / 4 , 1, 1, 1, 1, 1, 1}; // Similar a BBR
 
     // Trace activation
@@ -95,14 +103,12 @@ int main(int argc, char* argv[]) {
 
     // RB Info and position
     uint16_t gNbNum = 1;    // Numbers of RB
-    uint32_t gNbSysIDbase = 0x2D424E47; // gNb System ID base (every gNb starts from this)
     double gNbX = 50.0;     // X position
     double gNbY = 50.0;     // Y position
     uint16_t gNbD = 80;     // Distance between gNb
 
     // UE Info and position
     uint16_t ueNumPergNb = 1;   // Numbers of User per RB
-    uint32_t ueSysIDbase = 0x2D2D4555; // UE System ID base (every UE starts from this)
     double ueDistance = .50;    //Distance between UE
     double xUE=30;  //Initial X Position UE
     double yUE=10;  //Initial Y Position UE
@@ -192,6 +198,8 @@ int main(int argc, char* argv[]) {
     ********************************************************************************************************************/
     #pragma region sv_tcp_scenario
 
+    //NrAmc::Set(cqiHighGain, ProbeCqiDuration, stepFrequency); // To configure the ProbeCQI algorithm
+
     if (serverType == "Remote")
     {
         serverDelay = 0.04; 
@@ -237,7 +245,7 @@ int main(int argc, char* argv[]) {
         Config::SetDefault ("ns3::RttEstimator::InitialEstimation", TimeValue (MilliSeconds (10)));
 
         if( tcpTypeId=="TcpCubic"){
-            Config::SetDefault("ns3::TcpCubic::Beta", DoubleValue(1)); // Beta for multiplicative decrease. Default 0.7
+            Config::SetDefault("ns3::TcpCubic::Beta", DoubleValue(0.7)); // Beta for multiplicative decrease. Default 0.7
   
         }
         else if( tcpTypeId=="TcpBic"){
@@ -261,8 +269,8 @@ int main(int argc, char* argv[]) {
 
     NodeContainer gnbNodes;
     NodeContainer ueNodes;
-    gnbNodes.Create(gNbNum, gNbSysIDbase);
-    ueNodes.Create(gNbNum * ueNumPergNb, ueSysIDbase);
+    gnbNodes.Create(gNbNum, GNB_SYS_ID);
+    ueNodes.Create(gNbNum * ueNumPergNb, UE_SYS_ID);
 
     // set mobile device and base station antenna heights in meters, according to the chosen scenario
     if (scenario == "UMa") {
@@ -372,6 +380,7 @@ int main(int argc, char* argv[]) {
 
     nrHelper->SetBeamformingHelper(idealBeamformingHelper);
     nrHelper->SetEpcHelper(epcHelper);
+    epcHelper->SetAttribute("S1uLinkDelay", TimeValue(MilliSeconds(0)));    // Core latency
     
     /**
      * Spectrum configuration. We create a single operational band and configure the scenario.
@@ -446,6 +455,8 @@ int main(int argc, char* argv[]) {
     nrHelper->SetGnbAntennaAttribute("AntennaElement",
                                      PointerValue(CreateObject<IsotropicAntennaModel>()));
 
+    nrHelper->Initialize();     // > Dont know if needed, but it may help
+
     // install nr net devices
     NetDeviceContainer enbNetDev = nrHelper->InstallGnbDevice(gnbNodes, allBwps);
     NetDeviceContainer ueNetDev = nrHelper->InstallUeDevice(ueNodes, allBwps);
@@ -473,6 +484,7 @@ int main(int argc, char* argv[]) {
         }
     }
 
+    // Another way to add error to the receiver
     /*
     Ptr<RateErrorModel> em = CreateObject<RateErrorModel>();
     em->SetAttribute("ErrorRate", DoubleValue(0.00001));
@@ -499,10 +511,10 @@ int main(int argc, char* argv[]) {
     // Create the internet and install the IP stack on the UEs
     // Get SGW/PGW and create a single RemoteHost
     Ptr<Node> pgw = epcHelper->GetPgwNode();
-    epcHelper->GetSgwNode()->SetAttribute("SystemId", UintegerValue(0x2D574753)); // Set a Sys Id for the SGW Node
-    pgw->SetAttribute("SystemId", UintegerValue(0x2D574750));
+    epcHelper->GetSgwNode()->SetAttribute("SystemId", UintegerValue(SGW_SYS_ID)); // Set a Sys Id for the SGW Node
+    pgw->SetAttribute("SystemId", UintegerValue(PGW_SYS_ID));
     NodeContainer remoteHostContainer;
-    remoteHostContainer.Create(1, 0x2D2D4852);
+    remoteHostContainer.Create(1, RH_SYS_ID);
     Ptr<Node> remoteHost = remoteHostContainer.Get(0);
     InternetStackHelper internet;
     internet.Install(remoteHostContainer);
@@ -512,21 +524,20 @@ int main(int argc, char* argv[]) {
     p2ph.SetDeviceAttribute("DataRate", DataRateValue(DataRate("100Gb/s")));
     p2ph.SetDeviceAttribute("Mtu", UintegerValue(1500)); //2500
     p2ph.SetChannelAttribute("Delay", TimeValue(Seconds(serverDelay)));
-    p2ph.EnablePcapAll("mypcapfile");
     NetDeviceContainer internetDevices = p2ph.Install(pgw, remoteHost);
 
     Ipv4AddressHelper ipv4h;
     ipv4h.SetBase("1.0.0.0", "255.0.0.0");
     Ipv4InterfaceContainer internetIpIfaces = ipv4h.Assign(internetDevices);
+    
     Ipv4StaticRoutingHelper ipv4RoutingHelper;
-
     Ptr<Ipv4StaticRouting> remoteHostStaticRouting =
         ipv4RoutingHelper.GetStaticRouting(remoteHost->GetObject<Ipv4>());
     remoteHostStaticRouting->AddNetworkRouteTo(Ipv4Address("7.0.0.0"), Ipv4Mask("255.0.0.0"), 1);
     internet.Install(ueNodes);
 
     Ipv4InterfaceContainer ueIpIface;
-    ueIpIface = epcHelper->AssignUeIpv4Address(ueNetDev);
+    ueIpIface = epcHelper->AssignUeIpv4Address(NetDeviceContainer(ueNetDev));
 
     // assign IP address to UEs
     for (uint32_t u = 0; u < ueNodes.GetN(); ++u)
@@ -614,6 +625,7 @@ int main(int argc, char* argv[]) {
         asciiTCP.open("tcp-all-ascii.txt");
         ascii_wrap = new OutputStreamWrapper("tcp-all-ascii.txt", std::ios::out);
         internet.EnableAsciiIpv4All(ascii_wrap);
+        p2ph.EnablePcapAll("mypcapfile", true);
     }
 
 
@@ -879,21 +891,23 @@ TraceTcp(uint32_t nodeId, uint32_t socketId)
 
 /**
  * InstallTCP2
- * Instala la aplicación "MyApp" en los nodos remoteHost, sender.
+ * Instala la aplicación "MyApp" en los nodos remoteHost, receiver.
  */
 static void InstallTCP2 (Ptr<Node> remoteHost,
-                        Ptr<Node> sender,
+                        Ptr<Node> receiver,
                         uint16_t sinkPort,
                         float startTime,
                         float stopTime, float dataRate)
 {
     //Address sinkAddress (InetSocketAddress (ueIpIface.GetAddress (0), sinkPort));
-    Address sinkAddress (InetSocketAddress (sender->GetObject<Ipv4> ()->GetAddress (1,0).GetLocal (), sinkPort));
-    PacketSinkHelper packetSinkHelper ("ns3::TcpSocketFactory", InetSocketAddress (Ipv4Address::GetAny (), sinkPort));
-    ApplicationContainer sinkApps = packetSinkHelper.Install (sender);
+    Address sinkAddress (InetSocketAddress (receiver->GetObject<Ipv4> ()->GetAddress (1,0).GetLocal (), sinkPort));
+    Address sinkLocalAddress (InetSocketAddress (Ipv4Address::GetAny (), sinkPort));
+    PacketSinkHelper packetSinkHelper ("ns3::TcpSocketFactory", sinkLocalAddress);
+    ApplicationContainer sinkApps = packetSinkHelper.Install (receiver);
 
-    sinkApps.Start (Seconds (0.));
-    sinkApps.Stop (Seconds (simTime));
+    // Start and stop the app at times different than the simulations times
+    sinkApps.Start (Seconds (startTime * 0.02));
+    sinkApps.Stop (Seconds ((simTime - stopTime)*0.9 + stopTime));
 
     Ptr<Socket> ns3TcpSocket = Socket::CreateSocket (remoteHost, TcpSocketFactory::GetTypeId ());
     Ptr<MyApp> app = CreateObject<MyApp> ();
@@ -986,7 +1000,7 @@ static void PrintNodeAddressInfo(bool ignore_localh)
         std::clog << "\tLocalhosts addresses were excluded." << std::endl;
     }
 
-    for (uint8_t u = 0; u < NodeList::GetNNodes(); ++u) 
+    for (uint32_t u = 0; u < NodeList::GetNNodes(); ++u) 
     {   
         Ptr<Node> node = NodeList::GetNode(u);
         uint32_t id = node->GetId();
@@ -994,12 +1008,12 @@ static void PrintNodeAddressInfo(bool ignore_localh)
         Ptr<Ipv4> node_ip = node->GetObject<Ipv4>();
         uint32_t ieN = node_ip->GetNInterfaces();  // interface number
 
-        uint8_t a = (uint8_t)ignore_localh;     // Asumes that the 1st interface is localhost
+        uint32_t a = (uint8_t)ignore_localh;     // Asumes that the 1st interface is localhost
         for (; a < ieN; ++a)
         {   
             uint32_t num_address = node_ip->GetNAddresses(a);
 
-            for (uint8_t b = 0; b < num_address; b++)
+            for (uint32_t b = 0; b < num_address; b++)
             {
                 Ipv4Address IeAddres = node_ip->GetAddress(a, b).GetAddress();
                 std::clog << "\t " << (uint8_t)sysid << (uint8_t)(sysid >> 8) << (uint8_t)(sysid >> 16) << (uint8_t)(sysid >> 24)
