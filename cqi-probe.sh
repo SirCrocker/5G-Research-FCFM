@@ -10,7 +10,6 @@ tic=$(date +%s)
 serverType='Edge'
 rlcBufferPer=10
 tcpTypeId='TcpNewReno'
-cqiHighGain=2
 mobilityVal=0
 build_ns3=1
 pass_through=""
@@ -20,8 +19,7 @@ open_folder=0
 helpFunction()
 {
    echo ""
-   echo "Usage: $0 -g $cqiHighGain -t $tcpTypeId -s $serverType -r $rlcBufferPer -m $mobilityVal -b $build_ns3"
-   echo -e "\t-g 'CQI step 1-10'"
+   echo "Usage: $0 -t $tcpTypeId -s $serverType -r $rlcBufferPer -m $mobilityVal -b $build_ns3"
    echo -e "\t-t 'TcpNewReno' or 'TcpBbr' or 'TcpCubic' or 'TcpHighSpeed' or 'TcpBic' or 'TcpLinuxReno' or 'UDP'"
    echo -e "\t-s 'Remote' or 'Edge'"
    echo -e "\t-r RLC Buffer BDP Percentage 10 o 100"
@@ -36,7 +34,6 @@ helpFunction()
 while getopts "t:r:s:m:b:p:c:o:" opt
 do
    case "$opt" in
-      g ) cqiHighGain="$OPTARG" ;;
       t ) tcpTypeId="$OPTARG" ;;
       s ) serverType="$OPTARG" ;;
       r ) rlcBufferPer="$OPTARG" ;;
@@ -99,7 +96,7 @@ fi
 
 
 echo
-printf "Running... \ncqiHighGain:${green}${cqiHighGain}${clear}\tRLCBuffer: ${green}${rlcBufferPer}${clear}\t tcpTypeId: ${magenta}${tcpTypeId}${clear}\tServer: ${green}${serverType}${clear}\n"
+printf "Running... \nRLCBuffer: ${green}${rlcBufferPer}${clear}\t tcpTypeId: ${magenta}${tcpTypeId}${clear}\tServer: ${green}${serverType}${clear}\n"
 echo
 
 #backup run-sim and cc
@@ -108,10 +105,10 @@ outfolder="${RUTA_PROBE}/out"
 oldname_path=""
 if ([ "$custom_name" == "" ] || [[ $custom_name = *" "* ]])
 then
-   bkfolder=$cqiHighGain"-"$tcpTypeId"-"$servertag"-"$buffertag"-"`date +%Y%m%d%H%M`
+   bkfolder=$tcpTypeId"-"$servertag"-"$buffertag"-"`date +%Y%m%d%H%M`
 else
    bkfolder=$custom_name
-   oldname_path=$outfolder/$bkfolder/$cqiHighGain"-"$tcpTypeId"-"$servertag"-"$buffertag"-"`date +%Y%m%d%H%M`".oldname"
+   oldname_path=$outfolder/$bkfolder/$tcpTypeId"-"$servertag"-"$buffertag"-"`date +%Y%m%d%H%M`".oldname"
 fi
 
 me=`basename "$0"`
@@ -142,7 +139,6 @@ cp "${RUTA_PROBE}/graph.py" $outfolder/$bkfolder/graph.py.txt
     --tcpTypeId=`echo $tcpTypeId`
     --serverType=`echo $serverType`
     --rlcBufferPerc=`echo $rlcBufferPer`
-    --cqiHighGain=`echo $cqiHighGain`
     --mobility=`echo $mobilityVal`
    `echo $pass_through`
     " --cwd `echo $outfolder/$bkfolder` --no-build
