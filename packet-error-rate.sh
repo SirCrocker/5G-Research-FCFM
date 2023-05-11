@@ -29,7 +29,7 @@ flowType=`grep flowType ${myfolder}/graph.ini | cut -d " " -f 3`
 
 filename="tcp-all-ascii.txt"
 
-if [ "$flowType" == "TCP" ]; then
+if [ "$flowType" = "TCP" ]; then
 {
     cat $myfolder/$filename |grep /NodeList/$serverID | awk ' /^t/ \
     { i = 1 }\
