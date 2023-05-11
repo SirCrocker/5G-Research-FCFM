@@ -351,10 +351,6 @@ thrrx.loc[~thrrx['deltaTime'].notnull(),'deltaTime']=thrrx.loc[~thrrx['deltaTime
 thrrx['throughput']= thrrx['packetSize']*8 / thrrx['deltaTime']/1e6
 thrrx=thrrx.set_index('Time')
 
-# TODO FIX OR REPLACE
-if flowType=='TCP':
-    print("\tSkipping")
-"""IT WASNT WORKING, SO I COMMENTED IT
 if flowType=='TCP':
     RLCSTAT= pd.read_csv(myhome+"RlcBufferStat.txt", sep = "\t")
     RLCSTAT['direction']='UL'
@@ -399,7 +395,7 @@ plt.close()
 toc=time.time()
 print(f"\tProcessed in: %.2f" %(toc-tic))
 tic=toc
-"""
+
 
 if flowType=='UDP':
     ###############
@@ -463,7 +459,7 @@ else:
     ret['rtt']=ret['rtt']*1000
     ret['rtt'].plot()
     ax.set_ylabel("RTT [ms]")
-    ax.set_ylim(0, 400)
+    ax.set_ylim(0, 50)
     plt.suptitle(title)
     plt.title(subtitle)
     fig.savefig(myhome + prefix + 'RTT' + '.png')
