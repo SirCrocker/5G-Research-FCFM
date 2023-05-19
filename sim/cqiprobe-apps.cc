@@ -26,9 +26,25 @@ MyApp::~MyApp ()
   m_socket = nullptr;
 }
 
+TypeId
+MyApp::GetTypeId()
+{
+    static TypeId tid =
+        TypeId("ns3::MyAppComp")
+            .SetParent<Application>()
+            .SetGroupName("MyAppComp")
+            .AddAttribute("DataRate",
+                          "DataRate of the app",
+                          DataRateValue(0),
+                          MakeDataRateAccessor(&MyApp::m_dataRate),
+                          MakeDataRateChecker());
+    return tid;
+}
+
 void
 MyApp::Setup (Ptr<Socket> socket, Address address, uint32_t packetSize, uint32_t nPackets, DataRate dataRate)
 {
+  NS_LOG_FUNCTION(this << socket << address << packetSize << nPackets << dataRate);
   m_socket = socket;
   m_peer = address;
   m_packetSize = packetSize;
@@ -39,12 +55,14 @@ MyApp::Setup (Ptr<Socket> socket, Address address, uint32_t packetSize, uint32_t
 void
 MyApp::ChangeDataRate (DataRate rate)
 {
+  NS_LOG_FUNCTION(this << rate);
   m_dataRate = rate;
 }
 
 void
 MyApp::StartApplication()
 {
+  NS_LOG_FUNCTION(this);
   m_running = true;
   m_packetsSent = 0;
   m_socket->Bind ();
@@ -56,6 +74,7 @@ MyApp::StartApplication()
 void
 MyApp::StopApplication()
 {
+  NS_LOG_FUNCTION(this);
   m_running = false;
 
   if (m_sendEvent.IsRunning ())
@@ -74,6 +93,7 @@ MyApp::StopApplication()
 void
 MyApp::SendPacket()
 {
+    NS_LOG_FUNCTION(this);
     Ptr<Packet> packet = Create<Packet>(m_packetSize);
     //MyAppTag tag (Simulator::Now ());
     packet->EnablePrinting();
@@ -99,6 +119,7 @@ MyApp::SendPacket()
 void
 MyApp::ScheduleTx()
 {
+  NS_LOG_FUNCTION(this);
   if (m_running)
     {
       Time tNext (Seconds (m_packetSize * 8 / static_cast<double> (m_dataRate.GetBitRate ())));

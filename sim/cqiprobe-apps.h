@@ -9,6 +9,7 @@ class MyApp : public Application
 public:
   MyApp ();
   ~MyApp() override;
+  static TypeId GetTypeId();
   void ChangeDataRate (DataRate rate);
   void Setup (Ptr<Socket> socket, Address address, uint32_t packetSize, uint32_t nPackets, DataRate dataRate);
 
