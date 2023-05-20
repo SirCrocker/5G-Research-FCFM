@@ -11,7 +11,7 @@ source "paths.cfg"
 
 # Source directory
 source_dir="${PWD}/to_replace_in_src"
-nr_model_dir="/contrib/nr"
+nr_model_dir="/contrib/nr/model"
 
 # Define an array with intercalated filenames and corresponding destination paths
 file_data=("lte-rlc-um.cc.txt" "/src/lte/model" 
