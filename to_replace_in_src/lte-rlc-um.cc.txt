@@ -113,7 +113,10 @@ LteRlcUm::DoTransmitPdcpPdu(Ptr<Packet> p)
                               << "\t"
                               << "PacketSize"
                               << "\t"
-                              << "dropSize" << std::endl;
+                              << "dropSize" 
+                              << "\t"
+                              << "toString"
+                              << std::endl;
 
     }
 
@@ -129,7 +132,7 @@ LteRlcUm::DoTransmitPdcpPdu(Ptr<Packet> p)
         m_txBufferSize += p->GetSize();
         NS_LOG_LOGIC("NumOfBuffers = " << m_txBuffer.size());
         NS_LOG_LOGIC("txBufferSize = " << m_txBufferSize);
-
+        p->EnablePrinting();
         // JSA: Trace RLC Buffer add
         m_RlcTxBufferStatFile << Simulator::Now().GetSeconds()
                               << "\t"
@@ -141,7 +144,10 @@ LteRlcUm::DoTransmitPdcpPdu(Ptr<Packet> p)
                               << "\t"
                               << p->GetSize()
                               << "\t"
-                              << 0 << std::endl;
+                              << 0
+                              << "\t"
+                              << p->ToString()
+                              << std::endl;
     }
     else
     {
@@ -151,7 +157,7 @@ LteRlcUm::DoTransmitPdcpPdu(Ptr<Packet> p)
         NS_LOG_LOGIC("txBufferSize    = " << m_txBufferSize);
         NS_LOG_LOGIC("packet size     = " << p->GetSize());
         m_txDropTrace(p);
-
+        p->EnablePrinting();
         // JSA: Trace RLC Buffer Drop case
         m_RlcTxBufferStatFile << Simulator::Now().GetSeconds()
                               << "\t"
@@ -163,7 +169,10 @@ LteRlcUm::DoTransmitPdcpPdu(Ptr<Packet> p)
                               << "\t"
                               << p->GetSize()
                               << "\t"
-                              << p->GetSize() << std::endl;
+                              << p->GetSize()
+                              << "\t"
+                              << p->ToString()
+                              << std::endl;
     }
 
     /** Report Buffer Status */
