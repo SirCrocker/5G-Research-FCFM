@@ -31,13 +31,13 @@ for file_path in "$source_dir"/*; do
                 destination_dir="$RUTA_NS3${file_data[i+1]}"
                 new_file="${file%.txt}"
                 cp "$file_path" "$destination_dir/$new_file"
-                echo "[$green"✓"$clear] Copied $new_file to $destination_dir/$new_file"
+                printf "[${green}OK${clear}] Copied $new_file to $destination_dir/$new_file\n"
                 found=true
                 break
             fi
         done
         if ! $found; then
-            echo "[$red"×"$clear] No destination path set for file: $file"
+            printf "[${red}ER${clear}] No destination path set for file: $file\n"
         fi
     fi
 done
