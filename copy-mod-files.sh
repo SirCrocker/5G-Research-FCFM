@@ -15,6 +15,7 @@ nr_model_dir="/contrib/nr/model"
 
 # Define an array with intercalated filenames and corresponding destination paths
 file_data=("lte-rlc-um.cc.txt" "/src/lte/model" 
+           "lte-rlc-um.h.txt" "/src/lte/model"
            "nr-amc.cc.txt" "$nr_model_dir" 
            "nr-amc.h.txt" "$nr_model_dir"
            )
