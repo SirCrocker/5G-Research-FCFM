@@ -120,6 +120,7 @@ uint32_t
 NrAmc::CalculateTbSize(uint8_t mcs, uint32_t nprb) const
 {
     NS_LOG_FUNCTION(this << static_cast<uint32_t>(mcs));
+    NS_LOG_DEBUG("Estoy llamando a la funcion Calculate TbSize en el tiempo: " << Simulator::Now().GetSeconds());
 
     NS_ASSERT_MSG(mcs <= m_errorModel->GetMaxMcs(),
                   "MCS=" << static_cast<uint32_t>(mcs) << " while maximum MCS is "
@@ -231,49 +232,78 @@ NrAmc::CreateCqiFeedbackWbTdma(const SpectrumValue& sinr, uint8_t& mcs) const
 
         mcs = 0;
         Ptr<NrErrorModelOutput> output;
-        while (mcs <= m_errorModel->GetMaxMcs())
+        cqi = MyCqi();
+        NS_LOG_DEBUG("El m_currentState vale " << m_currentState << " en tiempo: " << Simulator::Now().GetSeconds());
+        switch (m_currentState)
         {
-            output = m_errorModel->GetTbDecodificationStats(sinr,
-                                                            rbMap,
-                                                            CalculateTbSize(mcs, rbMap.size()),
-                                                            mcs,
-                                                            NrErrorModel::NrErrorModelHistory());
-            if (output->m_tbler > 0.1)
+        case OUT_STEP:
+            NS_LOG_DEBUG("Me meti al OUT_STEP del original en tiempo: " << Simulator::Now().GetSeconds());
+            while (mcs <= m_errorModel->GetMaxMcs())
             {
-                break;
+                output = m_errorModel->GetTbDecodificationStats(sinr,
+                                                                rbMap,
+                                                                CalculateTbSize(mcs, rbMap.size()),
+                                                                mcs,
+                                                                NrErrorModel::NrErrorModelHistory());
+                if (output->m_tbler > 0.1)
+                {
+                    break;
+                }
+                mcs++;
             }
-            mcs++;
-        }
 
-        if (mcs > 0)
-        {
-            mcs--;
-        }
-
-        if ((output->m_tbler > 0.1) && (mcs == 0))
-        {
-            cqi = 0;
-        }
-        else if (mcs == m_errorModel->GetMaxMcs())
-        {
-            cqi = 15; // all MCSs can guarantee the 10 % of BER
-        }
-        else
-        {
-            double s = m_errorModel->GetSpectralEfficiencyForMcs(mcs);
-            cqi = 0;
-            while ((cqi < 15) && (m_errorModel->GetSpectralEfficiencyForCqi(cqi + 1) <= s))
+            if (mcs > 0)
             {
-                ++cqi;
+                mcs--;
             }
+
+            if ((output->m_tbler > 0.1) && (mcs == 0))
+            {
+                cqi = 0;
+            }
+            else if (mcs == m_errorModel->GetMaxMcs())
+            {
+                cqi = 15; // all MCSs can guarantee the 10 % of BER
+            }
+            else
+            {
+                double s = m_errorModel->GetSpectralEfficiencyForMcs(mcs);
+                cqi = 0;
+                while ((cqi < 15) && (m_errorModel->GetSpectralEfficiencyForCqi(cqi + 1) <= s))
+                {
+                    ++cqi;
+                }
+            }
+            NS_LOG_DEBUG(this << "\t MCS " << (uint16_t)mcs << "-> CQI " << +cqi);
+            NS_LOG_DEBUG("Actualicé el m_setCqiVal a: " << +m_setCqiVal << " en el tiempo : " << Simulator::Now().GetSeconds());
+            m_setCqiVal = cqi;
+            
+            break;
+        
+        case IN_STEP:
+            NS_LOG_DEBUG("Me meti al IN_STEP del original en tiempo: " << Simulator::Now().GetSeconds());
+            uint8_t mcs_max;
+            mcs_max = GetMcsFromCqi(cqi);
+            mcs = 0;
+
+            while (mcs <= m_errorModel->GetMaxMcs())
+            {
+                output = m_errorModel->GetTbDecodificationStats(sinr,
+                                                                rbMap,
+                                                                CalculateTbSize(mcs, rbMap.size()),
+                                                                mcs,
+                                                                NrErrorModel::NrErrorModelHistory());
+                if (mcs == mcs_max)
+                {
+                    break;
+                }
+                mcs++;
+            }
+            NS_LOG_DEBUG(this << "\t MCS " << (uint16_t)mcs << "-> CQI " << +cqi);
+            break;
         }
-        NS_LOG_DEBUG(this << "\t MCS " << (uint16_t)mcs << "-> CQI " << +cqi);
     }
-
-    cqi = MyCqi(cqi);
-    NS_LOG_INFO(" NUESTRO CQI ES " << +cqi << " al momento " << Simulator::Now().GetSeconds());
-    mcs = GetMcsFromCqi(cqi);
-
+    NS_LOG_DEBUG("Voy a devolver este CQI: " << +cqi << " en este tiempo: " << Simulator::Now().GetSeconds());
     return cqi;
 }
 
@@ -296,22 +326,22 @@ NrAmc::Set(const uint8_t cqiGain, Time stepDuration, Time stepFrequency)
 }
 
 uint8_t
-NrAmc::MyCqi(uint8_t cqi)
+NrAmc::MyCqi()
 {
-    NS_LOG_INFO("Probe::MyCqi("<< +cqi << ")");
-
+    
     if (!m_active)
     {
-        return cqi;
+        return m_setCqiVal;
     }
 
+    uint8_t cqi = m_setCqiVal;
     Time curr_time = Simulator::Now();
 
     switch (m_currentState)
     {
     case OUT_STEP:
 
-        if ( (curr_time - m_lastActivationTime) > m_stepFrequency )
+        if ( ((curr_time - m_lastActivationTime) > m_stepFrequency) && (cqi > 7) )
         {
             m_currentState = IN_STEP;
             m_lastActivationTime = curr_time;

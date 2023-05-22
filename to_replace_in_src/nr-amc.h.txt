@@ -188,7 +188,7 @@ class NrAmc : public Object
     uint32_t GetPayloadSize(uint8_t mcs, uint32_t nprb) const;
 
     static bool Set(const uint8_t cqiGain, Time stepDuration, Time stepFrequency);
-    static uint8_t MyCqi(uint8_t cqi);
+    static uint8_t MyCqi();
 
     enum State {
         IN_STEP,

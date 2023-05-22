@@ -32,7 +32,7 @@ NS_LOG_COMPONENT_DEFINE("ProbeCqiSimulation");
 /* Global Variables */
 auto tic = std::chrono::high_resolution_clock::now();       // Initial time
 auto itime = std::chrono::high_resolution_clock::now();     // Initial time 2
-double simTime = 7;            // in seconds
+double simTime = 30;            // in seconds
 Time timeRes = MilliSeconds(15); // Time to schedule the add noise function
 
 /* Auxiliary Vars */
@@ -93,8 +93,8 @@ int main(int argc, char* argv[]) {
 
     // CQI Probe own variables.
     uint8_t cqiHighGain = 3;         // Step of CQI probe
-    Time ProbeCqiDuration = MilliSeconds(500);  // miliseconds
-    Time stepFrequency = Seconds(2);
+    Time ProbeCqiDuration = MilliSeconds(3);  // miliseconds
+    Time stepFrequency = Seconds(4);
     // double cqiGainCycle[] = {5.0 / 4, 3.0 / 4 , 1, 1, 1, 1, 1, 1}; // Similar a BBR
 
     // Trace activation
@@ -186,7 +186,7 @@ int main(int argc, char* argv[]) {
         // LogComponentEnable("NrMacSchedulerCQIManagement", LOG_INFO);
         // LogComponentEnable("NrUePhy", LOG_FUNCTION);
         // LogComponentEnable("NrGnbPhy", LOG_FUNCTION);
-        // LogComponentEnable("NrAmc", LOG_FUNCTION);
+        LogComponentEnable("NrAmc", LOG_ALL);
         // LogComponentEnable("NrMacSchedulerCQIManagement", LOG_FUNCTION);
         // LogComponentEnable("MyAppComp", LOG_DEBUG);
     }
@@ -198,7 +198,7 @@ int main(int argc, char* argv[]) {
     ********************************************************************************************************************/
     #pragma region sv_tcp_scenario
 
-    //NrAmc::Set(cqiHighGain, ProbeCqiDuration, stepFrequency); // To configure the ProbeCQI algorithm
+    NrAmc::Set(cqiHighGain, ProbeCqiDuration, stepFrequency); // To configure the ProbeCQI algorithm
 
     if (serverType == "Remote")
     {
