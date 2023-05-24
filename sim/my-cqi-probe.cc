@@ -27,12 +27,10 @@
 
 using namespace ns3;
 
-NS_LOG_COMPONENT_DEFINE("ProbeCqiSimulation");
-
 /* Global Variables */
 auto tic = std::chrono::high_resolution_clock::now();       // Initial time
 auto itime = std::chrono::high_resolution_clock::now();     // Initial time 2
-double simTime = 30;            // in seconds
+double simTime = 7;            // in seconds
 Time timeRes = MilliSeconds(15); // Time to schedule the add noise function
 
 /* Auxiliary Vars */
@@ -171,24 +169,9 @@ int main(int argc, char* argv[]) {
     // enable logging
     if (logging)
     {
-        // LogComponentEnable ("LteRlcUm", LOG_LEVEL_ALL);
-        // LogComponentEnable ("ThreeGppSpectrumPropagationLossModel", LOG_LEVEL_ALL);
-        // LogComponentEnable("ThreeGppPropagationLossModel", LOG_LEVEL_ALL);
-        // LogComponentEnable ("ThreeGppChannelModel", LOG_LEVEL_ALL);
-        // LogComponentEnable ("ChannelConditionModel", LOG_LEVEL_ALL);
-        // LogComponentEnable("TcpCongestionOps",LOG_LEVEL_ALL);
-        // LogComponentEnable("TcpBic",LOG_LEVEL_ALL);
-        // LogComponentEnable("TcpBbr",LOG_LEVEL_ALL);
-        // LogComponentEnable ("UdpClient", LOG_LEVEL_INFO);
-        // LogComponentEnable ("UdpServer", LOG_LEVEL_INFO);
-        // LogComponentEnable ("LteRlcUm", LOG_LEVEL_LOGIC);
-        // LogComponentEnable ("LtePdcp", LOG_LEVEL_INFO);
-        // LogComponentEnable("NrMacSchedulerCQIManagement", LOG_INFO);
-        // LogComponentEnable("NrUePhy", LOG_FUNCTION);
-        // LogComponentEnable("NrGnbPhy", LOG_FUNCTION);
-        LogComponentEnable("NrAmc", LOG_ALL);
-        // LogComponentEnable("NrMacSchedulerCQIManagement", LOG_FUNCTION);
-        // LogComponentEnable("MyAppComp", LOG_DEBUG);
+        LogComponentEnableAll(LOG_PREFIX_TIME);
+        //LogComponentEnable("Packet", LOG_DEBUG);
+        // LogComponentEnableAll(LOG_ALL);
     }
 
     #pragma endregion logs
@@ -198,7 +181,7 @@ int main(int argc, char* argv[]) {
     ********************************************************************************************************************/
     #pragma region sv_tcp_scenario
 
-    NrAmc::Set(cqiHighGain, ProbeCqiDuration, stepFrequency); // To configure the ProbeCQI algorithm
+    // NrAmc::Set(cqiHighGain, ProbeCqiDuration, stepFrequency); // To configure the ProbeCQI algorithm
 
     if (serverType == "Remote")
     {
@@ -302,7 +285,7 @@ int main(int argc, char* argv[]) {
     // uemobility.SetMobilityModel("ns3::WaypointMobilityModel");
     uemobility.Install(ueNodes);
 
-    if (mobility==false){
+    if (!mobility){
         speed=0;
     }
  
@@ -390,7 +373,9 @@ int main(int argc, char* argv[]) {
     if (enableBuildings)
     {
         scenarioEnum = BandwidthPartInfo::UMa_Buildings;
-    } else {
+    } 
+    else 
+    {
         scenarioEnum = BandwidthPartInfo::UMa;
     }
 
