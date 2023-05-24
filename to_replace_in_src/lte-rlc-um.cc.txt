@@ -19,6 +19,9 @@
 
 #include "ns3/lte-rlc-um.h"
 
+#include "ns3/ipv4-header.h"
+#include "ns3/lte-pdcp-header.h"
+
 #include "ns3/log.h"
 #include "ns3/lte-rlc-header.h"
 #include "ns3/lte-rlc-sdu-status-tag.h"
@@ -31,11 +34,6 @@ namespace ns3
 NS_LOG_COMPONENT_DEFINE("LteRlcUm");
 
 NS_OBJECT_ENSURE_REGISTERED(LteRlcUm);
-
-// JSA: Added to trace RLC buffer
-std::ofstream m_RlcTxBufferStatFile;
-std::string m_RlcTxBufferStatFileName;
-
 
 LteRlcUm::LteRlcUm()
     : m_maxTxBufferSize(10 * 1024),
@@ -87,20 +85,22 @@ LteRlcUm::DoDispose()
     LteRlc::DoDispose();
 }
 
-/**
- * RLC SAP
- */
-
-void
-LteRlcUm::DoTransmitPdcpPdu(Ptr<Packet> p)
+void 
+LteRlcUm::TracePacketDataSetup(Ptr<Packet> p)
 {
-    NS_LOG_FUNCTION(this << m_rnti << (uint32_t)m_lcid << p->GetSize());
-
     // JSA: Added to trace RLC buffer
     if (!m_RlcTxBufferStatFile.is_open())
     {
+        LtePdcpHeader removeHeader;
+        Ptr<Packet> packet = p->Copy();
+        packet->RemoveHeader(removeHeader);
+
+        Ipv4Header ipHeader;
+        packet->PeekHeader(ipHeader);
+        Ipv4Address srcAddr = ipHeader.GetSource();
+    
         std::ostringstream oss;
-        oss <<"RlcBufferStat.txt";
+        oss <<"RlcBufferStat_" << srcAddr << "_.txt";
         m_RlcTxBufferStatFileName = oss.str();
         m_RlcTxBufferStatFile.open(m_RlcTxBufferStatFileName.c_str());
         m_RlcTxBufferStatFile << "Time"
@@ -114,11 +114,21 @@ LteRlcUm::DoTransmitPdcpPdu(Ptr<Packet> p)
                               << "PacketSize"
                               << "\t"
                               << "dropSize" 
-                              << "\t"
-                              << "toString"
                               << std::endl;
 
     }
+}
+
+/**
+ * RLC SAP
+ */
+
+void
+LteRlcUm::DoTransmitPdcpPdu(Ptr<Packet> p)
+{
+    NS_LOG_FUNCTION(this << m_rnti << (uint32_t)m_lcid << p->GetSize());
+
+    TracePacketDataSetup(p);
 
     if (m_txBufferSize + p->GetSize() <= m_maxTxBufferSize)
     {
@@ -132,7 +142,7 @@ LteRlcUm::DoTransmitPdcpPdu(Ptr<Packet> p)
         m_txBufferSize += p->GetSize();
         NS_LOG_LOGIC("NumOfBuffers = " << m_txBuffer.size());
         NS_LOG_LOGIC("txBufferSize = " << m_txBufferSize);
-        p->EnablePrinting();
+
         // JSA: Trace RLC Buffer add
         m_RlcTxBufferStatFile << Simulator::Now().GetSeconds()
                               << "\t"
@@ -145,8 +155,6 @@ LteRlcUm::DoTransmitPdcpPdu(Ptr<Packet> p)
                               << p->GetSize()
                               << "\t"
                               << 0
-                              << "\t"
-                              << p->ToString()
                               << std::endl;
     }
     else
@@ -157,7 +165,7 @@ LteRlcUm::DoTransmitPdcpPdu(Ptr<Packet> p)
         NS_LOG_LOGIC("txBufferSize    = " << m_txBufferSize);
         NS_LOG_LOGIC("packet size     = " << p->GetSize());
         m_txDropTrace(p);
-        p->EnablePrinting();
+
         // JSA: Trace RLC Buffer Drop case
         m_RlcTxBufferStatFile << Simulator::Now().GetSeconds()
                               << "\t"
@@ -170,8 +178,6 @@ LteRlcUm::DoTransmitPdcpPdu(Ptr<Packet> p)
                               << p->GetSize()
                               << "\t"
                               << p->GetSize()
-                              << "\t"
-                              << p->ToString()
                               << std::endl;
     }
 
