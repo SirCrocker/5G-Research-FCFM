@@ -94,6 +94,10 @@ class LteRlcUm : public LteRlc
     /// Report buffer status
     void DoReportBufferStatus();
 
+    // * CUSTOM 
+    // Tracing ()
+    void TracePacketDataSetup(Ptr<Packet> packet);
+
   private:
 
     // JSA: Added to trace RLC buffer
