@@ -43,6 +43,9 @@ else:
 config = configparser.ConfigParser()
 config.read(myhome+'graph.ini')
 
+# ----------------------------------------------------------
+# graph.ini info | Configurations and env variables values
+# ----------------------------------------------------------
 NRTrace = config['general']['NRTrace']
 TCPTrace = config['general']['TCPTrace']
 flowType = config['general']['flowType']
@@ -89,9 +92,10 @@ for item in test:
 
 
 prefix = tcpTypeId + '-'+ serverType + '-' + str(rlcBufferPerc) + '-'
-###############
-## Mobility
-###############
+
+# ----------------------------------------------------------
+# Mobility
+# ----------------------------------------------------------
 fig, ax = plt.subplots()
 file="mobilityPosition.txt"
 title="Mobility "
@@ -132,9 +136,10 @@ plt.close()
 toc=time.time()
 print(f"\tProcessed in: %.2f" %(toc-tic))
 tic=toc
-###############
-## SINR Ctlr
-###############
+
+# ----------------------------------------------------------
+# SINR Ctrl
+# ----------------------------------------------------------
 fig, ax = plt.subplots()
 file="DlCtrlSinr.txt"
 title="SINR Control"
@@ -158,10 +163,9 @@ print(f"\tProcessed in: %.2f" %(toc-tic))
 tic=toc
 
 
-
-###############
-## SINR Data
-###############
+# ----------------------------------------------------------
+# SINR Data
+# ----------------------------------------------------------
 fig, ax = plt.subplots()
 file="DlDataSinr.txt"
 title="SINR Data"
@@ -198,9 +202,9 @@ print(f"\tProcessed in: %.2f" %(toc-tic))
 tic=toc
 
 
-###############
-## CQI
-###############
+# ----------------------------------------------------------
+# CQI
+# ----------------------------------------------------------
 fig, ax = plt.subplots()
 file="RxPacketTrace.txt"
 title="CQI"
@@ -224,9 +228,9 @@ toc=time.time()
 print(f"\tProcessed in: %.2f" %(toc-tic))
 tic=toc
 
-###############
-## TBler
-###############
+# ----------------------------------------------------------
+# TBLER
+# ----------------------------------------------------------
 fig, ax = plt.subplots()
 file="RxPacketTrace.txt"
 title="BLER"
@@ -265,9 +269,9 @@ toc=time.time()
 print(f"\tProcessed in: %.2f" %(toc-tic))
 tic=toc
 
-###############
-## DL Path Loss
-###############
+# ----------------------------------------------------------
+# PATH LOSS
+# ----------------------------------------------------------
 fig, ax = plt.subplots()
 file="DlPathlossTrace.txt"
 title="Path Loss"
@@ -287,9 +291,9 @@ toc=time.time()
 print(f"\tProcessed in: %.2f" %(toc-tic))
 tic=toc
 
-###############
-## Throughput
-###############
+# ----------------------------------------------------------
+# Throughput TX
+# ----------------------------------------------------------
 fig, ax = plt.subplots()
 file="NrDlPdcpTxStats.txt"
 title=tcpTypeId[3:] + " "
@@ -326,6 +330,9 @@ print(f"\tProcessed in: %.2f" %(toc-tic))
 tic=toc
 
 
+# ----------------------------------------------------------
+# Throughput RX
+# ----------------------------------------------------------
 fig, ax = plt.subplots()
 file="NrDlPdcpRxStats.txt"
 title=tcpTypeId[3:] + " "
@@ -352,7 +359,7 @@ thrrx['throughput']= thrrx['packetSize']*8 / thrrx['deltaTime']/1e6
 thrrx=thrrx.set_index('Time')
 
 if flowType=='TCP':
-    RLCSTAT= pd.read_csv(myhome+"RlcBufferStat.txt", sep = "\t")
+    RLCSTAT= pd.read_csv(myhome+"RlcBufferStat_1.0.0.2_.txt", sep = "\t")
     RLCSTAT['direction']='UL'
     RLCSTAT.loc[RLCSTAT['PacketSize'] > 1500,'direction']='DL'
     rlc = RLCSTAT[RLCSTAT['direction'] =='DL']
@@ -378,7 +385,7 @@ if flowType=='TCP':
     ax3 = rlcbuffer['txBufferSize'].plot.area( secondary_y=True, ax=ax,  alpha=0.2, color="green")
 ax.set_xlabel("Time [s]")
 ax.set_ylabel("Throughput [Mb/s]")
-ax.set_ylim([0 , max([thr_limit,thrrx['throughput'].max()*1.1])])
+ax.set_ylim([0 , max([0,thrrx['throughput'].max()*1.1])])
 if flowType=='TCP':
     ax2.set_ylabel("RLC Buffer [%]", loc='bottom')
     ax2.set_ylim(0,4)
@@ -396,7 +403,65 @@ toc=time.time()
 print(f"\tProcessed in: %.2f" %(toc-tic))
 tic=toc
 
+# ----------------------------------------------------------
+# RLC Buffers
+# ----------------------------------------------------------
 
+def graphRlcBuffers():
+
+    PREFIX = "RlcBufferStat"
+    SUFFIX = ".txt"
+    buffers = []
+
+    # Find all buffers
+    for file in os.listdir(myhome):
+        if PREFIX in file and SUFFIX in file:
+            buffers.append(file)
+
+    if len(buffers) <= 0:
+        #print(red + "\tNo files found. Terminated." + clear)
+        return False
+
+    subplot_index = len(buffers)*100 + 11
+
+    num_buffers = len(buffers)
+    fig, ax = plt.subplots(num_buffers, 1, sharex='all', figsize=(7, 2.4*num_buffers))
+
+    plt.suptitle("RLC Buffers of UE(s) and Remote Host")
+
+    for buffer, index in zip(buffers, range(0, len(buffers))):
+        
+        # Retrieve IP
+        IP = buffer.replace(PREFIX + "_", "").replace("_" + SUFFIX, "")
+
+        # Read data
+        data = pd.read_csv(myhome + buffer, sep="\t")
+        x = data['Time']
+        y = data['NumOfBuffers']
+
+        ax[index].plot(x, y)
+        ax[index].tick_params('x', labelbottom=False)
+        ax[index].set_ylabel("Num. of packets")
+        ax[index].set_title("IP: " + IP)
+    
+    ax[index].tick_params('x', labelbottom=True)
+    ax[index].set_xlabel("Time [s]")
+    fig.savefig(myhome + prefix + "RlcBuffers.png")
+    plt.close()
+
+    return True
+
+print(cyan + "RLC Buffers" + clear, end="...", flush=True)
+tic=time.time()
+if graphRlcBuffers():
+    toc = time.time()
+    print(f"\tProcessed in: %.2f" %(toc-tic))
+else:
+    print(red + "\tError while processing. Terminated." + clear)
+
+# ----------------------------------------------------------
+# Delay | Only UDP
+# ----------------------------------------------------------
 if flowType=='UDP':
     ###############
     ## Delay
@@ -465,7 +530,10 @@ else:
     fig.savefig(myhome + prefix + 'RTT' + '.png')
     plt.close()
 
-# Only for TCP
+
+# ----------------------------------------------------------
+# CWND & Inflight bytes | Only TCP
+# ----------------------------------------------------------
 if flowType=="TCP":
     ###############
     # Congestion Window
