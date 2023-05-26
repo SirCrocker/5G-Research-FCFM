@@ -12,6 +12,7 @@ import sys
 import configparser
 import os
 from os import listdir
+import functools
 
 # Set text colors
 clear='\033[0m'
@@ -29,6 +30,37 @@ bg_yellow='\033[0;43m'
 bg_blue='\033[0;44m'
 bg_magenta='\033[0;45m'
 bg_cyan='\033[0;46m'
+
+# ----------------------------------------------------------
+# Decorator for time
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
+# It calculates the time it takes to execute the function
+# and prints its name (that must be passed as an argument)
+# and the time it took to execute.
+#
+# e.g.
+# @info_n_time_decorator("Custom function")
+# def myfunc():
+#   pass
+#
+# ----------------------------------------------------------
+def info_n_time_decorator(name):
+
+    def actual_decorator(func):
+        @functools.wraps(func)
+        def wrapper(*args, **kwargs):
+            
+            print(cyan + name + clear, end="...", flush=True)
+            tic=time.time()
+
+            if func(*args, **kwargs):
+                toc = time.time()
+                print(f"\tProcessed in: %.2f" %(toc-tic))
+            else:
+                print(red + "\tError while processing. Terminated." + clear)
+        
+        return wrapper
+    return actual_decorator
 
 tic=time.time()
 
@@ -407,6 +439,7 @@ tic=toc
 # RLC Buffers
 # ----------------------------------------------------------
 
+@info_n_time_decorator('RLC Buffers')
 def graphRlcBuffers():
 
     PREFIX = "RlcBufferStat"
@@ -440,6 +473,7 @@ def graphRlcBuffers():
         y = data['NumOfBuffers']
 
         ax[index].plot(x, y)
+        ax[index].fill_between(x, y, color='#539ecd')
         ax[index].tick_params('x', labelbottom=False)
         ax[index].set_ylabel("Num. of packets")
         ax[index].set_title("IP: " + IP)
@@ -451,13 +485,7 @@ def graphRlcBuffers():
 
     return True
 
-print(cyan + "RLC Buffers" + clear, end="...", flush=True)
-tic=time.time()
-if graphRlcBuffers():
-    toc = time.time()
-    print(f"\tProcessed in: %.2f" %(toc-tic))
-else:
-    print(red + "\tError while processing. Terminated." + clear)
+graphRlcBuffers()
 
 # ----------------------------------------------------------
 # Delay | Only UDP
