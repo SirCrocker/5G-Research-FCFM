@@ -13,6 +13,7 @@ import configparser
 import os
 from os import listdir
 import functools
+from scapy.all import *
 
 # Set text colors
 clear='\033[0m'
@@ -559,6 +560,7 @@ else:
     plt.close()
 
 
+
 # ----------------------------------------------------------
 # CWND & Inflight bytes | Only TCP
 # ----------------------------------------------------------
@@ -615,6 +617,75 @@ if flowType=="TCP":
 toc=time.time()
 print(f"\tProcessed in: %.2f" %(toc-tic))
 tic=toc
+
+# ----------------------------------------------------------
+# RTT 2
+# ----------------------------------------------------------
+
+def get_RTT(pcap_filename):
+
+    # Read the pcap file
+    packets = rdpcap(pcap_filename)
+
+    # Dictionary to store packet timestamps, rtt's and ack's received
+    packet_timestamps = {}
+    rtt_dict = {}
+    ack_received = []
+
+    # Iterate over each packet
+    for packet in packets:
+        if packet.haslayer(TCP):
+
+            seq_num = packet[TCP].seq
+            ack_num = packet[TCP].ack
+            timestamp = packet.time
+            TCP_payload = len(packet[TCP].payload)
+
+            # Cases to skip
+            case_1 = (seq_num == 0) # SYN
+            case_2 = (seq_num == 1 and ack_num == 1 and TCP_payload == 0) # SYN, ACK
+            case_3 = (ack_num in ack_received) # DUP ACK
+            skip_packets = (case_1 or case_2 or case_3)
+
+            if skip_packets:
+                continue
+
+            # Add timestamp of sending packet
+            if seq_num not in packet_timestamps:
+                packet_timestamps[seq_num] = timestamp
+                rtt_dict[seq_num] = 0
+
+            # Get Sequence Number from ACK
+            recovered_seq_num = ack_num-1448
+            
+            # Check if a packet is ACK and the SEQ exists
+            if (seq_num == 1) and  (recovered_seq_num in packet_timestamps):
+                rtt = timestamp - packet_timestamps[recovered_seq_num]
+                rtt_dict[recovered_seq_num] = rtt*1000
+                ack_received.append(ack_num)
+    
+    new_rtt_dict = {int((key-1)/1448 + 1) : value for key, value in rtt_dict.items()}
+
+    n_packet_array = list(new_rtt_dict.keys())
+    rtt_array = list(new_rtt_dict.values())
+    
+    fig, ax = plt.subplots()
+    plt.plot(n_packet_array, rtt_array)
+    plt.xlabel('Packet Number')
+    plt.ylabel('RTT [ms]')
+    plt.title('RTT 2')
+    plt.grid(True)
+    fig.savefig(myhome + 'RTT_2.png')
+
+@info_n_time_decorator("RTT 2")
+def w_rtt():
+    filename = myhome + "mypcapfile-5-1.pcap"
+    try:
+        get_RTT(filename)
+        return True
+    except:
+        return False
+w_rtt()
 
 exit()
 

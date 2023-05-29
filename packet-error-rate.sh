@@ -86,7 +86,7 @@ if [ "$flowType" = "TCP" ]; then
 }
 fi
 
-if [ "$flowType" == "UDP" ];
+if [ "$flowType" = "UDP" ];
 then
 {
     cat $myfolder/$filename |grep /NodeList/0 | awk '\
