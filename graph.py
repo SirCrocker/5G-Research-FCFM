@@ -3,7 +3,6 @@ import matplotlib.pyplot as plt
 from matplotlib.cbook import get_sample_data
 from matplotlib.offsetbox import AnnotationBbox,OffsetImage
 import matplotlib.patches as mpatches
-from scipy import special
 import math
 import pandas as pd
 from datetime import datetime
@@ -553,7 +552,7 @@ else:
     ret['rtt']=ret['rtt']*1000
     ret['rtt'].plot()
     ax.set_ylabel("RTT [ms]")
-    ax.set_ylim(0, 50)
+
     plt.suptitle(title)
     plt.title(subtitle)
     fig.savefig(myhome + prefix + 'RTT' + '.png')
