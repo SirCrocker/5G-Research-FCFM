@@ -2,3 +2,4 @@
 .vscode/**
 out/
 paths.cfg
+__pycache__/**
