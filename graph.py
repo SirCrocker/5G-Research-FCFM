@@ -15,21 +15,21 @@ import functools
 from scapy.all import *
 
 # Set text colors
-clear='\033[0m'
-red='\033[0;31m'
-green='\033[0;32m'
-yellow='\033[0;33m'
-blue='\033[0;34m'
-magenta='\033[0;35m'
-cyan='\033[0;36m'
+CLEAR='\033[0m'
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[0;33m'
+BLUE='\033[0;34m'
+MAGENTA='\033[0;35m'
+CYAN='\033[0;36m'
 
 # Set Background colors
-bg_red='\033[0;41m'
-bg_green='\033[0;42m'
-bg_yellow='\033[0;43m'
-bg_blue='\033[0;44m'
-bg_magenta='\033[0;45m'
-bg_cyan='\033[0;46m'
+BG_RED='\033[0;41m'
+BG_GREEN='\033[0;42m'
+BG_YELLOW='\033[0;43m'
+BG_BLUE='\033[0;44m'
+BG_MAGENTA='\033[0;45m'
+BG_CYAN='\033[0;46m'
 
 # ----------------------------------------------------------
 # Decorator for time
@@ -50,14 +50,21 @@ def info_n_time_decorator(name):
         @functools.wraps(func)
         def wrapper(*args, **kwargs):
             
-            print(cyan + name + clear, end="...", flush=True)
+            print(CYAN + name + CLEAR, end="...", flush=True)
             tic=time.time()
 
-            if func(*args, **kwargs):
+            try:
+                func_ret = func(*args, **kwargs)
+            except Exception as e:
+                if False:
+                    print(f"Exception thrown: {e}")
+                func_ret = False
+
+            if func_ret:
                 toc = time.time()
                 print(f"\tProcessed in: %.2f" %(toc-tic))
             else:
-                print(red + "\tError while processing. Terminated." + clear)
+                print(RED + "\tError while processing. Skipped." + CLEAR)
         
         return wrapper
     return actual_decorator
@@ -131,7 +138,7 @@ prefix = tcpTypeId + '-'+ serverType + '-' + str(rlcBufferPerc) + '-'
 fig, ax = plt.subplots()
 file="mobilityPosition.txt"
 title="Mobility "
-print(cyan + title + clear, end="...", flush=True)
+print(CYAN + title + CLEAR, end="...", flush=True)
 
 mob = pd.read_csv(myhome+file, sep = "\t")
 mob.set_index('Time', inplace=True)
@@ -175,7 +182,7 @@ tic=toc
 fig, ax = plt.subplots()
 file="DlCtrlSinr.txt"
 title="SINR Control"
-print(cyan + title + clear, end="...", flush=True)
+print(CYAN + title + CLEAR, end="...", flush=True)
 
 SINR = pd.read_csv(myhome+file, sep = "\t")
 SINR.set_index('Time', inplace=True)
@@ -201,7 +208,7 @@ tic=toc
 fig, ax = plt.subplots()
 file="DlDataSinr.txt"
 title="SINR Data"
-print(cyan + title + clear, end="...", flush=True)
+print(CYAN + title + CLEAR, end="...", flush=True)
 
 SINR = pd.read_csv(myhome+file, sep = "\t")
 SINR = SINR[SINR['RNTI']!=0]
@@ -240,7 +247,7 @@ tic=toc
 fig, ax = plt.subplots()
 file="RxPacketTrace.txt"
 title="CQI"
-print(cyan + title + clear, end="...", flush=True)
+print(CYAN + title + CLEAR, end="...", flush=True)
 
 CQI = pd.read_csv(myhome+file, sep = "\t")
 CQI.set_index('Time', inplace=True)
@@ -266,7 +273,7 @@ tic=toc
 fig, ax = plt.subplots()
 file="RxPacketTrace.txt"
 title="BLER"
-print(cyan + title + clear, end="...", flush=True)
+print(CYAN + title + CLEAR, end="...", flush=True)
 
 CQI = pd.read_csv(myhome+file, sep = "\t")
 #CQI.set_index('Time', inplace=True)
@@ -307,7 +314,7 @@ tic=toc
 fig, ax = plt.subplots()
 file="DlPathlossTrace.txt"
 title="Path Loss"
-print(cyan + title + clear, end="...", flush=True)
+print(CYAN + title + CLEAR, end="...", flush=True)
 
 PLOOS = pd.read_csv(myhome+file, sep = "\t")
 PLOOS.set_index('Time(sec)', inplace=True)
@@ -330,7 +337,7 @@ fig, ax = plt.subplots()
 file="NrDlPdcpTxStats.txt"
 title=tcpTypeId[3:] + " "
 title=title+"Throughput TX"
-print(cyan + title + clear, end="...", flush=True)
+print(CYAN + title + CLEAR, end="...", flush=True)
 
 TXSTAT = pd.read_csv(myhome+file, sep = "\t")
 
@@ -370,7 +377,7 @@ file="NrDlPdcpRxStats.txt"
 title=tcpTypeId[3:] + " "
 
 title=title + "Throughput"
-print(cyan + title + clear, end="...", flush=True)
+print(CYAN + title + CLEAR, end="...", flush=True)
 
 RXSTAT = pd.read_csv(myhome+file, sep = "\t")
 
@@ -436,7 +443,7 @@ print(f"\tProcessed in: %.2f" %(toc-tic))
 tic=toc
 
 # ----------------------------------------------------------
-# RLC Buffers
+# RLC Buffers | If FlowType TCP??
 # ----------------------------------------------------------
 
 @info_n_time_decorator('RLC Buffers')
@@ -454,8 +461,6 @@ def graphRlcBuffers():
     if len(buffers) <= 0:
         #print(red + "\tNo files found. Terminated." + clear)
         return False
-
-    subplot_index = len(buffers)*100 + 11
 
     num_buffers = len(buffers)
     fig, ax = plt.subplots(num_buffers, 1, sharex='all', figsize=(7, 2.4*num_buffers))
@@ -498,7 +503,7 @@ if flowType=='UDP':
     file="NrDlPdcpRxStats.txt"
     title=tcpTypeId + " "
     title=title+"Delay RX"
-    print(cyan + title + clear, end="...", flush=True)
+    print(CYAN + title + CLEAR, end="...", flush=True)
 
     RXSTAT = pd.read_csv(myhome+file, sep = "\t")
     rx=RXSTAT.groupby(['time(s)','rnti'])['delay(s)'].mean().reset_index()
@@ -534,7 +539,7 @@ else:
     title=tcpTypeId[3:] + " "
 
     title=title+"RTT"
-    print(cyan + title + clear, end="...", flush=True)
+    print(CYAN + title + CLEAR, end="...", flush=True)
 
     RXSTAT = pd.read_csv(myhome+file, sep = "\t")
 
@@ -619,7 +624,7 @@ tic=toc
 # ----------------------------------------------------------
 # RTT 2
 # ----------------------------------------------------------
-
+@info_n_time_decorator("RTT 2")
 def get_RTT(pcap_filename):
 
     # Read the pcap file
@@ -675,15 +680,9 @@ def get_RTT(pcap_filename):
     plt.grid(True)
     fig.savefig(myhome + 'RTT_2.png')
 
-@info_n_time_decorator("RTT 2")
-def w_rtt():
-    filename = myhome + "mypcapfile-5-1.pcap"
-    try:
-        get_RTT(filename)
-        return True
-    except:
-        return False
-w_rtt()
+    return True
+
+get_RTT(myhome + "mypcapfile-5-1.pcap")
 
 exit()
 
