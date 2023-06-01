@@ -9,7 +9,7 @@ tic=$(date +%s)
 # Default values
 serverType='Edge'
 rlcBufferPer=10
-tcpTypeId='TcpNewReno'
+tcpTypeId='UDP'
 mobilityVal=0
 build_ns3=1
 pass_through=""

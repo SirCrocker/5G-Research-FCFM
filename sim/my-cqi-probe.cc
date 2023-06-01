@@ -192,7 +192,15 @@ int main(int argc, char* argv[]) {
     {
         serverDelay = 0.004;
     }
-    rlcBuffer = round(dataRate*1e6/8*serverDelay*rlcBufferPerc/100); // Bytes BDP=250Mbps*100ms default: 999999999
+    
+    if (flowType == "TCP")
+    {
+        rlcBuffer = round(dataRate*1e6/8*serverDelay*rlcBufferPerc/100); // Bytes BDP=250Mbps*100ms default: 999999999
+    }
+    else
+    {
+        rlcBuffer = UINT32_MAX;
+    }
     /**
      * Default values for the simulation. We are progressively removing all
      * the instances of SetDefault, but we need it for legacy code (LTE)
@@ -239,7 +247,8 @@ int main(int argc, char* argv[]) {
         }
 
     }
-    else{
+    else
+    {
         // TCPTrace=false;
     }
     
