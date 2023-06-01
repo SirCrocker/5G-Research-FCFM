@@ -7,6 +7,7 @@
 #include "ns3/log.h"
 #include "ns3/mobility-module.h"
 #include "ns3/network-module.h"
+#include "ns3/flow-monitor-module.h"
 #include "ns3/nr-helper.h"
 #include "ns3/nr-mac-scheduler-tdma-rr.h"
 #include "ns3/nr-module.h"
@@ -45,7 +46,7 @@ const double NOISE_MEAN = 20;    // Default value is 5
 const double NOISE_VAR = 2;     // Noise variance
 const double NOISE_BOUND = 10;   // Noise bound, read NormalDistribution for info about the parameter.
 
-const double SEGMENT_SIZE = 1448.0;   // Maximum number of bits a packet can have
+const double SEGMENT_SIZE = 1448.0;   // Maximum number of bytes a packet can have
 const std::string LOG_FILENAME = "output.log";
 
 /* Trace functions, definitions are at EOF */
@@ -219,13 +220,13 @@ int main(int argc, char* argv[]) {
         Config::SetDefault("ns3::TcpSocket::DataRetries", UintegerValue(6)); // Number of data retransmission attempts. Default 6
         Config::SetDefault("ns3::TcpSocket::PersistTimeout", TimeValue (Seconds (2))); // Number of data retransmission attempts. Default 6
 
-        Config::Set ("/NodeList/*/DeviceList/*/TxQueue/MaxSize",  QueueSizeValue(QueueSize ("100p")));
-        Config::Set ("/NodeList/*/DeviceList/*/RxQueue/MaxSize",  QueueSizeValue(QueueSize ("100p")));
-        Config::SetDefault("ns3::DropTailQueue<Packet>::MaxSize", QueueSizeValue(QueueSize ("100p"))); //A FIFO packet queue that drops tail-end packets on overflow
-        Config::SetDefault(queueDisc + "::MaxSize", QueueSizeValue(QueueSize("100p"))); //100p Simple queue disc implementing the FIFO (First-In First-Out) policy
-        Config::SetDefault("ns3::TcpL4Protocol::RecoveryType",
-                           TypeIdValue(TypeId::LookupByName("ns3::TcpClassicRecovery"))); //set the congestion window value to the slow start threshold and maintain it at such value until we are fully recovered
-        Config::SetDefault ("ns3::RttEstimator::InitialEstimation", TimeValue (MilliSeconds (10)));
+        // Config::Set ("/NodeList/*/DeviceList/*/TxQueue/MaxSize",  QueueSizeValue(QueueSize ("100p")));
+        // Config::Set ("/NodeList/*/DeviceList/*/RxQueue/MaxSize",  QueueSizeValue(QueueSize ("100p")));
+        // Config::SetDefault("ns3::DropTailQueue<Packet>::MaxSize", QueueSizeValue(QueueSize ("100p"))); //A FIFO packet queue that drops tail-end packets on overflow
+        // Config::SetDefault(queueDisc + "::MaxSize", QueueSizeValue(QueueSize("100p"))); //100p Simple queue disc implementing the FIFO (First-In First-Out) policy
+        // Config::SetDefault("ns3::TcpL4Protocol::RecoveryType",
+        //                    TypeIdValue(TypeId::LookupByName("ns3::TcpClassicRecovery"))); //set the congestion window value to the slow start threshold and maintain it at such value until we are fully recovered
+        // Config::SetDefault ("ns3::RttEstimator::InitialEstimation", TimeValue (MilliSeconds (10)));
 
         if( tcpTypeId=="TcpCubic"){
             Config::SetDefault("ns3::TcpCubic::Beta", DoubleValue(0.7)); // Beta for multiplicative decrease. Default 0.7
@@ -672,8 +673,96 @@ int main(int argc, char* argv[]) {
 
     #pragma endregion trace_n_files
 
+    FlowMonitorHelper flowmonHelper;
+    NodeContainer endpointNodes;
+    endpointNodes.Add(remoteHost);
+    endpointNodes.Add(ueNodes);
+
+    Ptr<ns3::FlowMonitor> monitor = flowmonHelper.Install(endpointNodes);
+    monitor->SetAttribute("DelayBinWidth", DoubleValue(0.001));
+    monitor->SetAttribute("JitterBinWidth", DoubleValue(0.001));
+    monitor->SetAttribute("PacketSizeBinWidth", DoubleValue(20));
+
     Simulator::Stop(Seconds(simTime));
     Simulator::Run();
+
+
+     // Print per-flow statistics
+    monitor->CheckForLostPackets();
+    Ptr<Ipv4FlowClassifier> classifier =
+        DynamicCast<Ipv4FlowClassifier>(flowmonHelper.GetClassifier());
+    FlowMonitor::FlowStatsContainer stats = monitor->GetFlowStats();
+
+    double averageFlowThroughput = 0.0;
+    double averageFlowDelay = 0.0;
+
+    std::ofstream outFile;
+    std::string filename = "FlowOutput.txt";
+    outFile.open(filename.c_str(), std::ofstream::out | std::ofstream::trunc);
+    if (!outFile.is_open())
+    {
+        std::cerr << "Can't open file " << filename << std::endl;
+        return 1;
+    }
+
+    outFile.setf(std::ios_base::fixed);
+
+    for (std::map<FlowId, FlowMonitor::FlowStats>::const_iterator i = stats.begin();
+         i != stats.end();
+         ++i)
+    {
+        Ipv4FlowClassifier::FiveTuple t = classifier->FindFlow(i->first);
+        std::stringstream protoStream;
+        protoStream << (uint16_t)t.protocol;
+        if (t.protocol == 6)
+        {
+            protoStream.str("TCP");
+        }
+        if (t.protocol == 17)
+        {
+            protoStream.str("UDP");
+        }
+        outFile << "Flow " << i->first << " (" << t.sourceAddress << ":" << t.sourcePort << " -> "
+                << t.destinationAddress << ":" << t.destinationPort << ") proto "
+                << protoStream.str() << "\n";
+        outFile << "  Tx Packets: " << i->second.txPackets << "\n";
+        outFile << "  Tx Bytes:   " << i->second.txBytes << "\n";
+        outFile << "  TxOffered:  "
+                << i->second.txBytes * 8.0 / (simTime - AppStartTime) / 1000 / 1000 << " Mbps\n";
+        outFile << "  Rx Bytes:   " << i->second.rxBytes << "\n";
+        if (i->second.rxPackets > 0)
+        {
+            // Measure the duration of the flow from receiver's perspective
+            // double rxDuration = i->second.timeLastRxPacket.GetSeconds () -
+            // i->second.timeFirstTxPacket.GetSeconds ();
+            double rxDuration = (simTime - AppStartTime);
+
+            averageFlowThroughput += i->second.rxBytes * 8.0 / rxDuration / 1000 / 1000;
+            averageFlowDelay += 1000 * i->second.delaySum.GetSeconds() / i->second.rxPackets;
+
+            outFile << "  Throughput: " << i->second.rxBytes * 8.0 / rxDuration / 1000 / 1000
+                    << " Mbps\n";
+            outFile << "  Mean delay:  "
+                    << 1000 * i->second.delaySum.GetSeconds() / i->second.rxPackets << " ms\n";
+            // outFile << "  Mean upt:  " << i->second.uptSum / i->second.rxPackets / 1000/1000 << "
+            // Mbps \n";
+            outFile << "  Mean jitter:  "
+                    << 1000 * i->second.jitterSum.GetSeconds() / i->second.rxPackets << " ms\n";
+        }
+        else
+        {
+            outFile << "  Throughput:  0 Mbps\n";
+            outFile << "  Mean delay:  0 ms\n";
+            outFile << "  Mean jitter: 0 ms\n";
+        }
+        outFile << "  Rx Packets: " << i->second.rxPackets << "\n";
+    }
+
+    outFile << "\n\n  Mean flow throughput: " << averageFlowThroughput / stats.size() << "\n";
+    outFile << "  Mean flow delay: " << averageFlowDelay / stats.size() << "\n";
+
+    outFile.close();
+
     Simulator::Destroy();
 
     std::clog.rdbuf(clog_buff); // Redirect clog to original buffer

@@ -552,7 +552,6 @@ else:
     ret['rtt']=ret['rtt']*1000
     ret['rtt'].plot()
     ax.set_ylabel("RTT [ms]")
-
     plt.suptitle(title)
     plt.title(subtitle)
     fig.savefig(myhome + prefix + 'RTT' + '.png')
