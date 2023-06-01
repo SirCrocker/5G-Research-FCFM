@@ -376,7 +376,7 @@ fig, ax = plt.subplots()
 file="NrDlPdcpRxStats.txt"
 title=tcpTypeId[3:] + " "
 
-title=title + "Throughput"
+title=title + "Throughput RX"
 print(CYAN + title + CLEAR, end="...", flush=True)
 
 RXSTAT = pd.read_csv(myhome+file, sep = "\t")
@@ -682,7 +682,8 @@ def get_RTT(pcap_filename):
 
     return True
 
-get_RTT(myhome + "mypcapfile-5-1.pcap")
+if flowType=="TCP":
+    get_RTT(myhome + "mypcapfile-5-1.pcap")
 
 exit()
 
