@@ -187,7 +187,7 @@ def graphSinrCtrl():
     SINR.set_index('Time', inplace=True)
     SINR = SINR[SINR['RNTI']!=0]
     
-    SINR.groupby('RNTI')['SINR(dB)'].plot(legend=True, title=title)
+    SINR.groupby('RNTI')['SINR(dB)'].plot(title=title)
     #plt.ylim([min(15, SINR['SINR(dB)'].min()) , max(30,SINR['SINR(dB)'].max())])
     ax.set_ylabel("SINR(dB)")
     ax.set_xlabel("Time(s)")
@@ -251,7 +251,7 @@ def graphCQI():
     CQI = CQI[CQI['rnti']!=0]
     CQI = CQI[CQI['direction']=='DL']
     #print(SINR)
-    CQI.groupby('rnti')['CQI'].plot(legend=True, title=title)
+    CQI.groupby('rnti')['CQI'].plot(title=title)
     plt.ylim([0, 16])
     ax.set_ylabel("CQI")
     ax.set_xlabel("Time(s)")
@@ -316,7 +316,7 @@ def graphPathLoss():
     ploos = ploos.loc[ploos['IMSI']!=0]
     ploos = ploos[ploos['pathLoss(dB)'] < 0]
 
-    ploos.groupby(['IMSI'])['pathLoss(dB)'].plot(legend=True,title=file)
+    ploos.groupby(['IMSI'])['pathLoss(dB)'].plot(title=file)
     plt.suptitle(title)
     plt.title(SUBTITLE)
     fig.savefig(HOMEPATH + SIM_PREFIX + "PathLoss" + '.png')
@@ -514,7 +514,7 @@ def graphUdpDelay():
     ret['Time']=ret['InsertedDate'].astype(np.int64)/1e9
 
     ret=ret.set_index('Time')
-    ret.groupby(['rnti'])['delay'].plot(legend=True,title=title)
+    ret.groupby(['rnti'])['delay'].plot(title=title)
     ax.set_ylabel("delay(s)")
     plt.suptitle(title)
     plt.title(SUBTITLE)
@@ -578,7 +578,7 @@ def graphCWNDnInflightBytes():
 
         CWND.set_index('Time', inplace=True)
         if (len(CWND.index)>0):
-            CWND['newval'].plot(legend=True, title=title)
+            CWND['newval'].plot(title=title)
             plt.suptitle(title)
             plt.title(SUBTITLE)
 
@@ -605,7 +605,7 @@ def graphCWNDnInflightBytes():
     
         inflight.set_index('Time', inplace=True)
         if (len(inflight.index)>0):
-            inflight['newval'].plot(legend=True, title=title)
+            inflight['newval'].plot(title=title)
             plt.suptitle(title)
             plt.title(SUBTITLE)
 
