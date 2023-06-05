@@ -3,16 +3,15 @@ import matplotlib.pyplot as plt
 from matplotlib.cbook import get_sample_data
 from matplotlib.offsetbox import AnnotationBbox,OffsetImage
 import matplotlib.patches as mpatches
-import math
 import pandas as pd
-from datetime import datetime
 import time
 import sys
 import configparser
 import os
-from os import listdir
 import functools
-from scapy.all import *
+import logging
+logging.getLogger("scapy.runtime").setLevel(logging.ERROR)
+from scapy.all import rdpcap, TCP
 
 # Set text colors
 CLEAR='\033[0m'
@@ -41,7 +40,10 @@ BG_CYAN='\033[0;46m'
 # e.g.
 # @info_n_time_decorator("Custom function")
 # def myfunc():
-#   pass
+#   if works:
+#       return True
+#   else:
+#       return False
 #
 # ----------------------------------------------------------
 def info_n_time_decorator(name):
@@ -69,18 +71,15 @@ def info_n_time_decorator(name):
         return wrapper
     return actual_decorator
 
-tic=time.time()
-
-myhome="/home/jsandova/ns-3-dev"
 if (len(sys.argv)>2):
-    myhome=sys.argv[1]+"/"
+    HOMEPATH=sys.argv[1]+"/"
     mainprobe=sys.argv[2]
 else:
-    print("Not enough arguments.")
+    print("Not enough arguments. Put: {path_to_folder} {path_to_cqiprobe}")
     exit()
 
 config = configparser.ConfigParser()
-config.read(myhome+'graph.ini')
+config.read(HOMEPATH + 'graph.ini')
 
 # ----------------------------------------------------------
 # graph.ini info | Configurations and env variables values
@@ -121,326 +120,323 @@ buildDy = float(config['building']['buildDy'])
 buildLx = float(config['building']['buildLx'])
 buildLy = float(config['building']['buildLy'])
 
-subtitle = str(rlcBufferPerc) + '% BDP - Server: ' + serverType
+SUBTITLE = str(rlcBufferPerc) + '% BDP - Server: ' + serverType
 
-test = os.listdir(myhome)
+test = os.listdir(HOMEPATH)
 
+# Rewrite existing images
 for item in test:
     if item.endswith(".png"):
-        os.remove(os.path.join(myhome, item))
+        os.remove(os.path.join(HOMEPATH, item))
 
-
-prefix = tcpTypeId + '-'+ serverType + '-' + str(rlcBufferPerc) + '-'
+SIM_PREFIX = tcpTypeId + '-'+ serverType + '-' + str(rlcBufferPerc) + '-'
 
 # ----------------------------------------------------------
 # Mobility
 # ----------------------------------------------------------
-fig, ax = plt.subplots()
-file="mobilityPosition.txt"
-title="Mobility "
-print(CYAN + title + CLEAR, end="...", flush=True)
+@info_n_time_decorator("Mobility")
+def graphMobility():
+    fig, ax = plt.subplots()
+    file="mobilityPosition.txt"
+    title="Mobility"
 
-mob = pd.read_csv(myhome+file, sep = "\t")
-mob.set_index('Time', inplace=True)
-ax1= mob.plot.scatter( x='x',y='y', ax=ax,title=title)
-gNbicon=plt.imread(get_sample_data(f'{mainprobe}/gNb.png'))
-gNbbox = OffsetImage(gNbicon, zoom = 0.25)
-for g in range(gNbNum):
-    gNbPos=[gNbX,(gNbY+5+g*gNbD)]
-    gNbab=AnnotationBbox(gNbbox,gNbPos, frameon = False)
-    ax.add_artist(gNbab)
-if (enableBuildings):
-    for b in range(buildN):
-        row, col = divmod(b,gridWidth)
-        rect=mpatches.Rectangle((buildX+(buildLx+buildDx)*col,buildY+(buildLy+buildDy)*row),buildLx,buildLy, alpha=0.5, facecolor="red")
-        plt.gca().add_patch(rect)
+    mob = pd.read_csv(HOMEPATH + file, sep = "\t")
+    mob.set_index('Time', inplace=True)
+    ax1= mob.plot.scatter( x='x',y='y', ax=ax,title=title)
+    gNbicon=plt.imread(get_sample_data(f'{mainprobe}/gNb.png'))
+    gNbbox = OffsetImage(gNbicon, zoom = 0.25)
+    for g in range(gNbNum):
+        gNbPos=[gNbX,(gNbY+5+g*gNbD)]
+        gNbab=AnnotationBbox(gNbbox,gNbPos, frameon = False)
+        ax.add_artist(gNbab)
+    if (enableBuildings):
+        for b in range(buildN):
+            row, col = divmod(b,gridWidth)
+            rect=mpatches.Rectangle((buildX+(buildLx+buildDx)*col,buildY+(buildLy+buildDy)*row),buildLx,buildLy, alpha=0.5, facecolor="red")
+            plt.gca().add_patch(rect)
 
-UEicon=plt.imread(get_sample_data(f'{mainprobe}/UE.png'))
-UEbox = OffsetImage(UEicon, zoom = 0.02)
+    UEicon=plt.imread(get_sample_data(f'{mainprobe}/UE.png'))
+    UEbox = OffsetImage(UEicon, zoom = 0.02)
 
-for ue in mob['UE'].unique():
-    UEPos=mob[mob['UE']==ue][['x','y']].iloc[-1:].values[0]+2
-    UEab=AnnotationBbox(UEbox,UEPos, frameon = False)
-    ax.add_artist(UEab)
+    for ue in mob['UE'].unique():
+        UEPos=mob[mob['UE']==ue][['x','y']].iloc[-1:].values[0]+2
+        UEab=AnnotationBbox(UEbox,UEPos, frameon = False)
+        ax.add_artist(UEab)
 
-plt.xlim([min(0, mob['x'].min()) , max(100,mob['x'].max()+10)])
-plt.ylim([min(0, mob['y'].min()) , max(100,mob['y'].max()+10)])
-ax.set_xlabel("Distance [m]")
-ax.set_ylabel("Distance [m]")
+    plt.xlim([min(0, mob['x'].min()) , max(100,mob['x'].max()+10)])
+    plt.ylim([min(0, mob['y'].min()) , max(100,mob['y'].max()+10)])
+    ax.set_xlabel("Distance [m]")
+    ax.set_ylabel("Distance [m]")
 
 
-fig.savefig(myhome+prefix +file+'.png')
-plt.close()
+    fig.savefig(HOMEPATH + SIM_PREFIX + title +'.png')
+    plt.close()
 
-toc=time.time()
-print(f"\tProcessed in: %.2f" %(toc-tic))
-tic=toc
+    return True
 
 # ----------------------------------------------------------
 # SINR Ctrl
 # ----------------------------------------------------------
-fig, ax = plt.subplots()
-file="DlCtrlSinr.txt"
-title="SINR Control"
-print(CYAN + title + CLEAR, end="...", flush=True)
+@info_n_time_decorator("SINR Control")
+def graphSinrCtrl():
+    fig, ax = plt.subplots()
+    file="DlCtrlSinr.txt"
+    title="SINR Control"
 
-SINR = pd.read_csv(myhome+file, sep = "\t")
-SINR.set_index('Time', inplace=True)
-SINR = SINR[SINR['RNTI']!=0]
-#print(SINR)
-SINR.groupby('RNTI')['SINR(dB)'].plot(legend=True, title=title)
-plt.ylim([min(15, SINR['SINR(dB)'].min()) , max(30,SINR['SINR(dB)'].max())])
-ax.set_ylabel("SINR(dB)")
-ax.set_xlabel("Time(s)")
-plt.suptitle(title)
-plt.title(subtitle)
-fig.savefig(myhome+file+'.png')
-plt.close()
+    SINR = pd.read_csv(HOMEPATH+file, sep = "\t")
+    SINR.set_index('Time', inplace=True)
+    SINR = SINR[SINR['RNTI']!=0]
+    
+    SINR.groupby('RNTI')['SINR(dB)'].plot(legend=True, title=title)
+    #plt.ylim([min(15, SINR['SINR(dB)'].min()) , max(30,SINR['SINR(dB)'].max())])
+    ax.set_ylabel("SINR(dB)")
+    ax.set_xlabel("Time(s)")
+    plt.suptitle(title)
+    plt.title(SUBTITLE)
+    fig.savefig(HOMEPATH + SIM_PREFIX + "SinrCtrl" +'.png')
+    plt.close()
 
-toc=time.time()
-print(f"\tProcessed in: %.2f" %(toc-tic))
-tic=toc
+    return True
 
 
 # ----------------------------------------------------------
 # SINR Data
 # ----------------------------------------------------------
-fig, ax = plt.subplots()
-file="DlDataSinr.txt"
-title="SINR Data"
-print(CYAN + title + CLEAR, end="...", flush=True)
+@info_n_time_decorator("SINR Data")
+def graphSinrData():
+    fig, ax = plt.subplots()
+    file ="DlDataSinr.txt"
+    title = "SINR Data"
 
-SINR = pd.read_csv(myhome+file, sep = "\t")
-SINR = SINR[SINR['RNTI']!=0]
-SINR=SINR.groupby(['Time','RNTI'])['SINR(dB)'].mean().reset_index()
+    sinr = pd.read_csv(HOMEPATH+file, sep = "\t")
+    sinr = sinr[sinr['RNTI']!=0]
+    sinr=sinr.groupby(['Time','RNTI'])['SINR(dB)'].mean().reset_index()
 
-SINR.index=pd.to_datetime(SINR['Time'],unit='s')
-SINR.rename(
-    columns={ "SINR(dB)":"sinr"},
-    inplace=True,
-)
-SINR=pd.DataFrame(SINR.groupby('RNTI').resample(str(resamplePeriod)+'ms').sinr.mean())
-SINR=SINR.reset_index(level=0)
+    sinr.index=pd.to_datetime(sinr['Time'],unit='s')
+    sinr.rename(
+        columns={ "SINR(dB)":"sinr"},
+        inplace=True,
+    )
+    sinr=pd.DataFrame(sinr.groupby('RNTI').resample(str(resamplePeriod)+'ms').sinr.mean())
+    sinr=sinr.reset_index(level=0)
 
-SINR['Time']=SINR.index
-SINR['Time']=SINR['Time'].astype(np.int64)/1e9
+    sinr['Time']=sinr.index
+    sinr['Time']=sinr['Time'].astype(np.int64)/1e9
 
-SINR.set_index('Time', inplace=True)
+    sinr.set_index('Time', inplace=True)
 
-SINR.groupby('RNTI')['sinr'].plot()
+    sinr.groupby('RNTI')['sinr'].plot()
 
-plt.ylim([min(30, SINR['sinr'].min()) , max(60,SINR['sinr'].max())])
-ax.set_ylabel("SINR(dB)")
-ax.set_xlabel("Time(s)")
-plt.suptitle(title)
-plt.title(subtitle)
-fig.savefig(myhome+file+'.png')
-plt.close()
-toc=time.time()
-print(f"\tProcessed in: %.2f" %(toc-tic))
-tic=toc
+    #plt.ylim([min(30, sinr['sinr'].min()) , max(60,sinr['sinr'].max())])
+    ax.set_ylabel("SINR(dB)")
+    ax.set_xlabel("Time(s)")
+    plt.suptitle(title)
+    plt.title(SUBTITLE)
+    fig.savefig(HOMEPATH + SIM_PREFIX + "SinrData" + '.png')
+    plt.close()
 
+    return True
 
 # ----------------------------------------------------------
 # CQI
 # ----------------------------------------------------------
-fig, ax = plt.subplots()
-file="RxPacketTrace.txt"
-title="CQI"
-print(CYAN + title + CLEAR, end="...", flush=True)
+@info_n_time_decorator("CQI")
+def graphCQI():
+    fig, ax = plt.subplots()
+    file="RxPacketTrace.txt"
+    title="CQI"
 
-CQI = pd.read_csv(myhome+file, sep = "\t")
-CQI.set_index('Time', inplace=True)
-CQI = CQI[CQI['rnti']!=0]
-CQI = CQI[CQI['direction']=='DL']
-#print(SINR)
-CQI.groupby('rnti')['CQI'].plot(legend=True, title=title)
-plt.ylim([0, 16])
-ax.set_ylabel("CQI")
-ax.set_xlabel("Time(s)")
-plt.suptitle(title)
-plt.title(subtitle)
-fig.savefig(myhome+file+'.png')
-plt.close()
+    CQI = pd.read_csv(HOMEPATH+file, sep = "\t")
+    CQI.set_index('Time', inplace=True)
+    CQI = CQI[CQI['rnti']!=0]
+    CQI = CQI[CQI['direction']=='DL']
+    #print(SINR)
+    CQI.groupby('rnti')['CQI'].plot(legend=True, title=title)
+    plt.ylim([0, 16])
+    ax.set_ylabel("CQI")
+    ax.set_xlabel("Time(s)")
+    plt.suptitle(title)
+    plt.title(SUBTITLE)
+    fig.savefig(HOMEPATH + SIM_PREFIX + title +'.png')
+    plt.close()
 
-toc=time.time()
-print(f"\tProcessed in: %.2f" %(toc-tic))
-tic=toc
+    return True
 
 # ----------------------------------------------------------
 # TBLER
 # ----------------------------------------------------------
-fig, ax = plt.subplots()
-file="RxPacketTrace.txt"
-title="BLER"
-print(CYAN + title + CLEAR, end="...", flush=True)
+@info_n_time_decorator("TBLER")
+def graphTbler():
+    fig, ax = plt.subplots()
+    file="RxPacketTrace.txt"
+    title="BLER"
 
-CQI = pd.read_csv(myhome+file, sep = "\t")
-#CQI.set_index('Time', inplace=True)
-CQI = CQI[CQI['rnti']!=0]
-CQI = CQI[CQI['direction']=='DL']
+    cqi = pd.read_csv(HOMEPATH+file, sep = "\t")
+    #CQI.set_index('Time', inplace=True)
+    cqi = cqi[cqi['rnti']!=0]
+    cqi = cqi[cqi['direction']=='DL']
 
-CQI.index=pd.to_datetime(CQI['Time'],unit='s')
+    cqi.index=pd.to_datetime(cqi['Time'],unit='s')
 
-BLER=pd.DataFrame(CQI.groupby('rnti').resample(str(resamplePeriod)+'ms').TBler.mean())
+    bler=pd.DataFrame(cqi.groupby('rnti').resample(str(resamplePeriod)+'ms').TBler.mean())
 
-BLER=BLER.reset_index(level=0)
+    bler=bler.reset_index(level=0)
 
-BLER['Time']=BLER.index
-BLER['Time']=BLER['Time'].astype(np.int64)/1e9
-BLER=BLER.set_index('Time')
+    bler['Time']=bler.index
+    bler['Time']=bler['Time'].astype(np.int64)/1e9
+    bler=bler.set_index('Time')
 
-for i in range(BLER['rnti'].max()):
-    plt.semilogy(BLER.index, BLER[BLER['rnti']==i+1].TBler, label=str(i+1))
+    for i in range(bler['rnti'].max()):
+        plt.semilogy(bler.index, bler[bler['rnti']==i+1].TBler, label=str(i+1))
 
-plt.xlabel("Time(s)")
-plt.ylabel("BLER")
-# ax.set_ylim([abs(min([(1e-20) ,BLER.TBler.min()*0.9])) , 1])
-# plt.legend()
-plt.title(title)
-plt.grid(True, which="both", ls="-")
-plt.suptitle(title)
-plt.title(subtitle)
-fig.savefig(myhome+file+'-tbler'+'.png')
-plt.close()
+    plt.xlabel("Time(s)")
+    plt.ylabel("BLER")
+    # ax.set_ylim([abs(min([(1e-20) ,BLER.TBler.min()*0.9])) , 1])
+    # plt.legend()
+    plt.title(title)
+    plt.grid(True, which="both", ls="-")
+    plt.suptitle(title)
+    plt.title(SUBTITLE)
+    fig.savefig(HOMEPATH + SIM_PREFIX + 'Tbler' + '.png')
+    plt.close()
 
-toc=time.time()
-print(f"\tProcessed in: %.2f" %(toc-tic))
-tic=toc
+    return True
 
 # ----------------------------------------------------------
 # PATH LOSS
 # ----------------------------------------------------------
-fig, ax = plt.subplots()
-file="DlPathlossTrace.txt"
-title="Path Loss"
-print(CYAN + title + CLEAR, end="...", flush=True)
+@info_n_time_decorator("Path Loss")
+def graphPathLoss():
+    fig, ax = plt.subplots()
+    file="DlPathlossTrace.txt"
+    title="Path Loss"
 
-PLOOS = pd.read_csv(myhome+file, sep = "\t")
-PLOOS.set_index('Time(sec)', inplace=True)
-PLOOS = PLOOS.loc[PLOOS['IMSI']!=0]
-PLOOS = PLOOS[PLOOS['pathLoss(dB)'] < 0]
+    ploos = pd.read_csv(HOMEPATH+file, sep = "\t")
+    ploos.set_index('Time(sec)', inplace=True)
+    ploos = ploos.loc[ploos['IMSI']!=0]
+    ploos = ploos[ploos['pathLoss(dB)'] < 0]
 
-PLOOS.groupby(['IMSI'])['pathLoss(dB)'].plot(legend=True,title=file)
-plt.suptitle(title)
-plt.title(subtitle)
-fig.savefig(myhome+file+'.png')
-plt.close()
-toc=time.time()
-print(f"\tProcessed in: %.2f" %(toc-tic))
-tic=toc
+    ploos.groupby(['IMSI'])['pathLoss(dB)'].plot(legend=True,title=file)
+    plt.suptitle(title)
+    plt.title(SUBTITLE)
+    fig.savefig(HOMEPATH + SIM_PREFIX + "PathLoss" + '.png')
+    plt.close()
+
+    return True
 
 # ----------------------------------------------------------
 # Throughput TX
 # ----------------------------------------------------------
-fig, ax = plt.subplots()
-file="NrDlPdcpTxStats.txt"
-title=tcpTypeId[3:] + " "
-title=title+"Throughput TX"
-print(CYAN + title + CLEAR, end="...", flush=True)
+@info_n_time_decorator("Throughput TX")
+def graphThrTx():
+    fig, ax = plt.subplots()
+    file="NrDlPdcpTxStats.txt"
+    title=tcpTypeId[3:] + " "
+    title=title+"Throughput TX"
 
-TXSTAT = pd.read_csv(myhome+file, sep = "\t")
+    TXSTAT = pd.read_csv(HOMEPATH+file, sep = "\t")
 
-tx=TXSTAT.groupby(['time(s)','rnti'])['packetSize'].sum().reset_index()
-tx.index=pd.to_datetime(tx['time(s)'],unit='s')
+    tx=TXSTAT.groupby(['time(s)','rnti'])['packetSize'].sum().reset_index()
+    tx.index=pd.to_datetime(tx['time(s)'],unit='s')
 
-thrtx=pd.DataFrame(tx.groupby('rnti').resample(str(resamplePeriod)+'ms').packetSize.sum())
-thrtx=thrtx.reset_index(level=0)
+    thrtx=pd.DataFrame(tx.groupby('rnti').resample(str(resamplePeriod)+'ms').packetSize.sum())
+    thrtx=thrtx.reset_index(level=0)
 
-thrtx['InsertedDate']=thrtx.index
-thrtx['deltaTime']=thrtx['InsertedDate'].astype(np.int64)/1e9
-thrtx['Time']=thrtx['deltaTime']
-thrtx['deltaTime']=thrtx.groupby('rnti').diff()['deltaTime']
+    thrtx['InsertedDate']=thrtx.index
+    thrtx['deltaTime']=thrtx['InsertedDate'].astype(np.int64)/1e9
+    thrtx['Time']=thrtx['deltaTime']
+    thrtx['deltaTime']=thrtx.groupby('rnti').diff()['deltaTime']
 
-thrtx.loc[~thrtx['deltaTime'].notnull(),'deltaTime']=thrtx.loc[~thrtx['deltaTime'].notnull(),'InsertedDate'].astype(np.int64)/1e9
-thrtx['throughput']= thrtx['packetSize']*8 / thrtx['deltaTime']/1e6
-thrtx=thrtx.set_index('Time')
-thrtx.groupby(['rnti'])['throughput'].plot()
-ax.set_xlabel("Time [s]")
-ax.set_ylabel("throughput(Mb/s)")
-ax.set_ylim([0 , thrtx['throughput'].max()*1.1])
-plt.suptitle(title)
-plt.title(subtitle)
+    thrtx.loc[~thrtx['deltaTime'].notnull(),'deltaTime']=thrtx.loc[~thrtx['deltaTime'].notnull(),'InsertedDate'].astype(np.int64)/1e9
+    thrtx['throughput']= thrtx['packetSize']*8 / thrtx['deltaTime']/1e6
+    thrtx=thrtx.set_index('Time')
+    thrtx.groupby(['rnti'])['throughput'].plot()
+    ax.set_xlabel("Time [s]")
+    ax.set_ylabel("throughput(Mb/s)")
+    ax.set_ylim([0 , thrtx['throughput'].max()*1.1])
+    plt.suptitle(title)
+    plt.title(SUBTITLE)
 
-fig.savefig(myhome + prefix + 'ThrTx' + '.png')
+    fig.savefig(HOMEPATH + SIM_PREFIX + 'ThrTx' + '.png')
+    plt.close()
 
-toc=time.time()
-print(f"\tProcessed in: %.2f" %(toc-tic))
-tic=toc
+    return True
 
 
 # ----------------------------------------------------------
 # Throughput RX
 # ----------------------------------------------------------
-fig, ax = plt.subplots()
-file="NrDlPdcpRxStats.txt"
-title=tcpTypeId[3:] + " "
+@info_n_time_decorator("Throughput RX")
+def graphThrRx():
+    fig, ax = plt.subplots()
+    file="NrDlPdcpRxStats.txt"
+    title=tcpTypeId[3:] + " "
 
-title=title + "Throughput RX"
-print(CYAN + title + CLEAR, end="...", flush=True)
+    title=title + "Throughput RX"
 
-RXSTAT = pd.read_csv(myhome+file, sep = "\t")
+    rxStat = pd.read_csv(HOMEPATH+file, sep = "\t")
 
-rx=RXSTAT.groupby(['time(s)','rnti'])['packetSize'].sum().reset_index()
-rx.index=pd.to_datetime(rx['time(s)'],unit='s')
+    rx=rxStat.groupby(['time(s)','rnti'])['packetSize'].sum().reset_index()
+    rx.index=pd.to_datetime(rx['time(s)'],unit='s')
 
-thrrx=pd.DataFrame(rx.groupby('rnti').resample(str(resamplePeriod)+'ms').packetSize.sum())
-thrrx=thrrx.reset_index(level=0)
+    thrrx=pd.DataFrame(rx.groupby('rnti').resample(str(resamplePeriod)+'ms').packetSize.sum())
+    thrrx=thrrx.reset_index(level=0)
 
-thrrx['InsertedDate']=thrrx.index
-thrrx['deltaTime']=thrrx['InsertedDate'].astype(np.int64)/1e9
-thrrx['Time']=thrrx['deltaTime']
+    thrrx['InsertedDate']=thrrx.index
+    thrrx['deltaTime']=thrrx['InsertedDate'].astype(np.int64)/1e9
+    thrrx['Time']=thrrx['deltaTime']
 
-thrrx['deltaTime']=thrrx.groupby('rnti').diff()['deltaTime']
+    thrrx['deltaTime']=thrrx.groupby('rnti').diff()['deltaTime']
 
-thrrx.loc[~thrrx['deltaTime'].notnull(),'deltaTime']=thrrx.loc[~thrrx['deltaTime'].notnull(),'InsertedDate'].astype(np.int64)/1e9
-thrrx['throughput']= thrrx['packetSize']*8 / thrrx['deltaTime']/1e6
-thrrx=thrrx.set_index('Time')
+    thrrx.loc[~thrrx['deltaTime'].notnull(),'deltaTime']=thrrx.loc[~thrrx['deltaTime'].notnull(),'InsertedDate'].astype(np.int64)/1e9
+    thrrx['throughput']= thrrx['packetSize']*8 / thrrx['deltaTime']/1e6
+    thrrx=thrrx.set_index('Time')
 
-if flowType=='TCP':
-    RLCSTAT= pd.read_csv(myhome+"RlcBufferStat_1.0.0.2_.txt", sep = "\t")
-    RLCSTAT['direction']='UL'
-    RLCSTAT.loc[RLCSTAT['PacketSize'] > 1500,'direction']='DL'
-    rlc = RLCSTAT[RLCSTAT['direction'] =='DL']
-    rlc.index=pd.to_datetime(rlc['Time'],unit='s')
+    if flowType=='TCP':
+        rlcStat= pd.read_csv(HOMEPATH+"RlcBufferStat_1.0.0.2_.txt", sep = "\t")
+        rlcStat['direction']='UL'
+        rlcStat.loc[rlcStat['PacketSize'] > 1500,'direction']='DL'
+        rlc = rlcStat[rlcStat['direction'] =='DL']
+        rlc.index=pd.to_datetime(rlc['Time'],unit='s')
 
-    rlcdrop=pd.DataFrame(rlc.resample(str(resamplePeriod)+'ms').dropSize.sum())
-    rlcdrop['Time']=rlcdrop.index.astype(np.int64)/1e9
-    rlcdrop=rlcdrop.set_index('Time')
-    rlcdrop['state']=0
-    rlcdrop.loc[rlcdrop['dropSize'] > 0,'state']=1
+        rlcdrop=pd.DataFrame(rlc.resample(str(resamplePeriod)+'ms').dropSize.sum())
+        rlcdrop['Time']=rlcdrop.index.astype(np.int64)/1e9
+        rlcdrop=rlcdrop.set_index('Time')
+        rlcdrop['state']=0
+        rlcdrop.loc[rlcdrop['dropSize'] > 0,'state']=1
 
-    rlcbuffer=pd.DataFrame(rlc.resample(str(resamplePeriod)+'ms').txBufferSize.max())
-    rlcbuffer['Time']=rlcbuffer.index.astype(np.int64)/1e9
-    rlcbuffer=rlcbuffer.set_index('Time')
-    rlcbuffer['txBufferSize']=rlcbuffer['txBufferSize']/rlcBuffer
-    rlcdrop['state']=rlcdrop['state']*rlcbuffer['txBufferSize']
-    rlcbuffer.loc[rlcdrop['state'] > 0,'txBufferSize']=0
+        rlcbuffer=pd.DataFrame(rlc.resample(str(resamplePeriod)+'ms').txBufferSize.max())
+        rlcbuffer['Time']=rlcbuffer.index.astype(np.int64)/1e9
+        rlcbuffer=rlcbuffer.set_index('Time')
+        rlcbuffer['txBufferSize']=rlcbuffer['txBufferSize']/rlcBuffer
+        rlcdrop['state']=rlcdrop['state']*rlcbuffer['txBufferSize']
+        rlcbuffer.loc[rlcdrop['state'] > 0,'txBufferSize']=0
 
-# ax2 = ax.twinx()
-ax1 = thrrx.groupby(['rnti'])['throughput'].plot( ax=ax)
-if flowType=='TCP':
-    ax2 = rlcdrop['state'].plot.area( secondary_y=True, ax=ax, alpha=0.2, color="red")
-    ax3 = rlcbuffer['txBufferSize'].plot.area( secondary_y=True, ax=ax,  alpha=0.2, color="green")
-ax.set_xlabel("Time [s]")
-ax.set_ylabel("Throughput [Mb/s]")
-ax.set_ylim([0 , max([0,thrrx['throughput'].max()*1.1])])
-if flowType=='TCP':
-    ax2.set_ylabel("RLC Buffer [%]", loc='bottom')
-    ax2.set_ylim(0,4)
+    # ax2 = ax.twinx()
+    ax1 = thrrx.groupby(['rnti'])['throughput'].plot( ax=ax)
+    
+    if flowType=='TCP':
+        ax2 = rlcdrop['state'].plot.area( secondary_y=True, ax=ax, alpha=0.2, color="red")
+        ax3 = rlcbuffer['txBufferSize'].plot.area( secondary_y=True, ax=ax,  alpha=0.2, color="green")
+    ax.set_xlabel("Time [s]")
+    ax.set_ylabel("Throughput [Mb/s]")
+    ax.set_ylim([0 , max([0,thrrx['throughput'].max()*1.1])])
+    
+    if flowType=='TCP':
+        ax2.set_ylabel("RLC Buffer [%]", loc='bottom')
+        ax2.set_ylim(0,4)
 
-    ax2.set_yticks([0,0.5,1])
-    ax2.set_yticklabels(['0','50','100' ])
+        ax2.set_yticks([0,0.5,1])
+        ax2.set_yticklabels(['0','50','100' ])
 
-    ax3.set_ylim(0,rlcbuffer['txBufferSize'].max()*4)
+        ax3.set_ylim(0,rlcbuffer['txBufferSize'].max()*4)
 
-plt.suptitle(title)
-plt.title(subtitle)
-fig.savefig(myhome + prefix + 'ThrRx' + '.png')
-plt.close()
-toc=time.time()
-print(f"\tProcessed in: %.2f" %(toc-tic))
-tic=toc
+    plt.suptitle(title)
+    plt.title(SUBTITLE)
+    fig.savefig(HOMEPATH + SIM_PREFIX + 'ThrRx' + '.png')
+    plt.close()
+
+    return True
 
 # ----------------------------------------------------------
 # RLC Buffers | If FlowType TCP??
@@ -454,7 +450,7 @@ def graphRlcBuffers():
     buffers = []
 
     # Find all buffers
-    for file in os.listdir(myhome):
+    for file in os.listdir(HOMEPATH):
         if PREFIX in file and SUFFIX in file:
             buffers.append(file)
 
@@ -473,7 +469,7 @@ def graphRlcBuffers():
         IP = buffer.replace(PREFIX + "_", "").replace("_" + SUFFIX, "")
 
         # Read data
-        data = pd.read_csv(myhome + buffer, sep="\t")
+        data = pd.read_csv(HOMEPATH + buffer, sep="\t")
         x = data['Time']
         y = data['NumOfBuffers']
 
@@ -485,17 +481,16 @@ def graphRlcBuffers():
     
     ax[index].tick_params('x', labelbottom=True)
     ax[index].set_xlabel("Time [s]")
-    fig.savefig(myhome + prefix + "RlcBuffers.png")
+    fig.savefig(HOMEPATH + SIM_PREFIX + "RlcBuffers.png")
     plt.close()
 
     return True
 
-graphRlcBuffers()
-
 # ----------------------------------------------------------
 # Delay | Only UDP
 # ----------------------------------------------------------
-if flowType=='UDP':
+@info_n_time_decorator("UDP Delay")
+def graphUdpDelay():
     ###############
     ## Delay
     ###############
@@ -503,9 +498,8 @@ if flowType=='UDP':
     file="NrDlPdcpRxStats.txt"
     title=tcpTypeId + " "
     title=title+"Delay RX"
-    print(CYAN + title + CLEAR, end="...", flush=True)
 
-    RXSTAT = pd.read_csv(myhome+file, sep = "\t")
+    RXSTAT = pd.read_csv(HOMEPATH+file, sep = "\t")
     rx=RXSTAT.groupby(['time(s)','rnti'])['delay(s)'].mean().reset_index()
     rx.rename(
         columns={ "delay(s)":"delay"},
@@ -523,14 +517,17 @@ if flowType=='UDP':
     ret.groupby(['rnti'])['delay'].plot(legend=True,title=title)
     ax.set_ylabel("delay(s)")
     plt.suptitle(title)
-    plt.title(subtitle)
-    fig.savefig(myhome + prefix + 'Delay1' + '.png')
+    plt.title(SUBTITLE)
+    fig.savefig(HOMEPATH + SIM_PREFIX + 'Delay1' + '.png')
     plt.close()
 
-    toc=time.time()
-    print(f"\tProcessed in: %.2f" %(toc-tic))
-    tic=toc
-else:
+    return True
+
+# ----------------------------------------------------------
+# RTT | Only TCP
+# ----------------------------------------------------------
+@info_n_time_decorator("RTT")
+def graphTcpDelay():
     ###############
     ## Delay 2
     ###############
@@ -539,9 +536,8 @@ else:
     title=tcpTypeId[3:] + " "
 
     title=title+"RTT"
-    print(CYAN + title + CLEAR, end="...", flush=True)
 
-    RXSTAT = pd.read_csv(myhome+file, sep = "\t")
+    RXSTAT = pd.read_csv(HOMEPATH+file, sep = "\t")
 
     rx=RXSTAT.groupby(['Time'])['rtt'].mean().reset_index()
 
@@ -558,16 +554,17 @@ else:
     ret['rtt'].plot()
     ax.set_ylabel("RTT [ms]")
     plt.suptitle(title)
-    plt.title(subtitle)
-    fig.savefig(myhome + prefix + 'RTT' + '.png')
+    plt.title(SUBTITLE)
+    fig.savefig(HOMEPATH + SIM_PREFIX + 'RTT' + '.png')
     plt.close()
 
-
+    return True
 
 # ----------------------------------------------------------
 # CWND & Inflight bytes | Only TCP
 # ----------------------------------------------------------
-if flowType=="TCP":
+@info_n_time_decorator("CWND and Inflight Bytes")
+def graphCWNDnInflightBytes():
     ###############
     # Congestion Window
     ###############
@@ -577,15 +574,15 @@ if flowType=="TCP":
         file="tcp-cwnd-"+serverID+"-"+str(u)+".txt"
         title=tcpTypeId + " "
         title=title+"Congestion Window"
-        CWND = pd.read_csv(myhome+file, sep = "\t")
+        CWND = pd.read_csv(HOMEPATH+file, sep = "\t")
 
         CWND.set_index('Time', inplace=True)
         if (len(CWND.index)>0):
             CWND['newval'].plot(legend=True, title=title)
             plt.suptitle(title)
-            plt.title(subtitle)
+            plt.title(SUBTITLE)
 
-            fig.savefig(myhome+file+str(u)+'.png')
+            fig.savefig(HOMEPATH + SIM_PREFIX + "Cwnd-UE" + str(u) + '.png')
 
     plt.close()
 
@@ -599,30 +596,27 @@ if flowType=="TCP":
         title=tcpTypeId + " "
             
         title=title + "inflight Bytes"
-        INF = pd.read_csv(myhome+file, sep = "\t")
+        inflight = pd.read_csv(HOMEPATH+file, sep = "\t")
         # INF.loc[INF['oldval']>0]['oldval']= INF.loc[INF['oldval']>0]['oldval']/SegmentSize
         # INF.loc[INF['newval']>0]['newval']= INF.loc[INF['newval']>0]['newval']/SegmentSize
     
-        INF['oldval']= INF['oldval']/SegmentSize
-        INF['newval']= INF['newval']/SegmentSize
+        inflight['oldval']= inflight['oldval'] / SegmentSize
+        inflight['newval']= inflight['newval'] / SegmentSize
     
-        INF.set_index('Time', inplace=True)
-        if (len(INF.index)>0):
-            INF['newval'].plot(legend=True, title=title)
+        inflight.set_index('Time', inplace=True)
+        if (len(inflight.index)>0):
+            inflight['newval'].plot(legend=True, title=title)
             plt.suptitle(title)
-            plt.title(subtitle)
+            plt.title(SUBTITLE)
 
-            fig.savefig(myhome+file+str(u)+'.png')
+            fig.savefig(HOMEPATH + SIM_PREFIX + "InflightBytes-UE" + str(u) + '.png')
 
     plt.close()
 
-#plt.show()
-toc=time.time()
-print(f"\tProcessed in: %.2f" %(toc-tic))
-tic=toc
+    return True
 
 # ----------------------------------------------------------
-# RTT 2
+# RTT 2 | Only TCP
 # ----------------------------------------------------------
 @info_n_time_decorator("RTT 2")
 def get_RTT(pcap_filename):
@@ -678,74 +672,31 @@ def get_RTT(pcap_filename):
     plt.ylabel('RTT [ms]')
     plt.title('RTT 2')
     plt.grid(True)
-    fig.savefig(myhome + 'RTT_2.png')
+    fig.savefig(HOMEPATH + SIM_PREFIX + 'RTT_2.png')
 
     return True
 
-if flowType=="TCP":
-    get_RTT(myhome + "mypcapfile-5-1.pcap")
+#   | * ---- * ---- * ---- * |
+#   |  Call graph functions  |
+#   | * ---- * ---- * ---- * |
 
-exit()
+# For all flows
+graphMobility()
+graphSinrCtrl()
+graphSinrData()
+graphCQI()
+graphTbler()
+graphPathLoss()
+graphThrTx()
+graphThrRx()
 
+# For TCP only
+if flowType == "TCP":
+    graphRlcBuffers()
+    graphTcpDelay()
+    graphCWNDnInflightBytes()
+    get_RTT(HOMEPATH + "mypcapfile-5-1.pcap")
 
-###############
-## SINR Data
-###############
-fig, ax = plt.subplots()
-file="DlDataSinr.txt"
-title="SINR Data "+file
-
-SINR = pd.read_csv(myhome+file, sep = "\t")
-SINR.set_index('Time', inplace=True)
-SINR = SINR[SINR['RNTI']!=0]
-#print(SINR)
-
-SINR.groupby('RNTI')['SINR(dB)'].plot(legend=True, title=title)
-ax.set_ylabel("SINR(dB)")
-ax.set_xlabel("Time(s)")
-fig.savefig(myhome+file+'.png')
-plt.close()
-
-
-fig, ax = plt.subplots()
-u=0
-
-file="tcp-inflight-"+serverID+"-"+str(u)+".txt"
-title=tcpTypeId + " "
-    
-title=title + "inflight Bytes " + file
-INF = pd.read_csv(myhome+file, sep = "\t")
-INF.loc[INF['oldval']>0,'oldval']=INF.loc[INF['oldval']>0,'oldval']/SegmentSize
-INF.loc[INF['newval']>0,'newval']=INF.loc[INF['newval']>0,'newval']/SegmentSize
-
-INF.set_index('Time', inplace=True)
-INF['newval'].plot(legend=True, title=title)
-fig.savefig(myhome+file+str(u)+'.png')
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-serverID = config['general']['serverID']
-UENum = int(config['general']['UENum'])
-
-
-
-a=pd.DataFrame(thrtx['packetSize'])
-a.rename(columns={"packetSize": "bytesTx"}, inplace=True)
-a['Time']=a.index
-b=pd.DataFrame(thrrx['packetSize'])
-b.rename(columns={"packetSize": "bytesRx"}, inplace=True)
-b['Time']=b.index
-pd.concat([a,b], axis=1)
+# For UDP only
+if flowType == "UDP":
+    graphUdpDelay()
