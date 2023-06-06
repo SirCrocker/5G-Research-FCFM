@@ -58,12 +58,15 @@ static void NextRxTracer(Ptr<OutputStreamWrapper> stream, SequenceNumber32 old [
 static void InFlightTracer(Ptr<OutputStreamWrapper> stream, uint32_t old [[maybe_unused]], uint32_t inFlight);
 static void SsThreshTracer(Ptr<OutputStreamWrapper> stream, uint32_t oldval, uint32_t newval);
 static void TraceTcp(uint32_t nodeId, uint32_t socketId);
+static void UdpServerTracer(Ptr<OutputStreamWrapper> stream, Ptr<const Packet> p, const Address &srcAdd, const Address &destAdd);
 
 /* Helper functions, definitions are at EOF */
 static void InstallTCP2 (Ptr<Node> remoteHost, Ptr<Node> receiver, uint16_t sinkPort, float startTime, float stopTime, float dataRate);
 static void CalculatePosition(NodeContainer* ueNodes, NodeContainer* gnbNodes, std::ostream* os);
 static void AddRandomNoise(Ptr<NrPhy> ue_phy);
 static void PrintNodeAddressInfo(bool ignore_localh);
+static void processFlowMonitor(Ptr<FlowMonitor> monitor, Ptr<ns3::FlowClassifier> flowmonHelper, double AppStartTime);
+static void UdpServerMakeCallback(uint32_t nodeId);
 
 
 int main(int argc, char* argv[]) {
@@ -200,6 +203,7 @@ int main(int argc, char* argv[]) {
     else
     {
         rlcBuffer = UINT32_MAX;
+        rlcBufferPerc = 99999;
     }
     /**
      * Default values for the simulation. We are progressively removing all
@@ -562,6 +566,8 @@ int main(int argc, char* argv[]) {
             UdpServerHelper dlPacketSinkHelper(dlPort);
             serverApps.Add(dlPacketSinkHelper.Install(ueNodes.Get(u)));
 
+            UdpServerMakeCallback(ueNodes.Get(u)->GetId());
+
             UdpClientHelper dlClient(ueIpIface.GetAddress(u), dlPort);
             dlClient.SetAttribute("Interval", TimeValue(MicroSeconds(interval)));
             dlClient.SetAttribute("MaxPackets", UintegerValue(0xFFFFFFFF));
@@ -695,11 +701,27 @@ int main(int argc, char* argv[]) {
     Simulator::Stop(Seconds(simTime));
     Simulator::Run();
 
+    processFlowMonitor(monitor, flowmonHelper.GetClassifier(), AppStartTime);
 
-     // Print per-flow statistics
+    Simulator::Destroy();
+
+    std::clog.rdbuf(clog_buff); // Redirect clog to original buffer
+
+    std::cout << "\nThe End" << std::endl;
+    auto toc = std::chrono::high_resolution_clock::now();
+    std::cout << "Total Time: " << "\033[1;35m"  << 1.e-9*std::chrono::duration_cast<std::chrono::nanoseconds>(toc-itime).count() << "\033[0m"<<  std::endl;
+
+    return 0;
+};
+
+
+static void
+processFlowMonitor(Ptr<FlowMonitor> monitor, Ptr<ns3::FlowClassifier> flowClassifier, double AppStartTime)
+{
+    // Print per-flow statistics
     monitor->CheckForLostPackets();
     Ptr<Ipv4FlowClassifier> classifier =
-        DynamicCast<Ipv4FlowClassifier>(flowmonHelper.GetClassifier());
+        DynamicCast<Ipv4FlowClassifier>(flowClassifier);
     FlowMonitor::FlowStatsContainer stats = monitor->GetFlowStats();
 
     double averageFlowThroughput = 0.0;
@@ -711,7 +733,7 @@ int main(int argc, char* argv[]) {
     if (!outFile.is_open())
     {
         std::cerr << "Can't open file " << filename << std::endl;
-        return 1;
+        return;
     }
 
     outFile.setf(std::ios_base::fixed);
@@ -771,22 +793,42 @@ int main(int argc, char* argv[]) {
     outFile << "  Mean flow delay: " << averageFlowDelay / stats.size() << "\n";
 
     outFile.close();
-
-    Simulator::Destroy();
-
-    std::clog.rdbuf(clog_buff); // Redirect clog to original buffer
-
-    std::cout << "\nThe End" << std::endl;
-    auto toc = std::chrono::high_resolution_clock::now();
-    std::cout << "Total Time: " << "\033[1;35m"  << 1.e-9*std::chrono::duration_cast<std::chrono::nanoseconds>(toc-itime).count() << "\033[0m"<<  std::endl;
-
-    return 0;
-};
+}
 
 /********************************************************************************************************************
  * Trace and util functions (Own)
 ********************************************************************************************************************/
 #pragma region trace_n_utils_functions
+
+static void
+UdpServerTracer(Ptr<OutputStreamWrapper> stream, Ptr<const Packet> p, const Address &srcAdd, const Address &destAdd)
+{
+    SeqTsHeader seqTs;
+    p->Copy()->RemoveHeader(seqTs);
+    *stream->GetStream() << Simulator::Now().GetNanoSeconds() / (double)1e9 
+                         << "\t" << p->GetSize()
+                         << "\t" << InetSocketAddress::ConvertFrom(srcAdd).GetIpv4()
+                         << "\t" << seqTs.GetSeq()
+                         << "\t" << (Simulator::Now() - seqTs.GetTs()).GetNanoSeconds() / (double)1e9
+                         << std::endl;
+}
+
+static void
+UdpServerMakeCallback(uint32_t nodeId)
+{
+    AsciiTraceHelper asciiUdpServer;
+    Ptr<OutputStreamWrapper> udpServerStream = asciiUdpServer.CreateFileStream("UdpRecv_Node"
+                                        + std::to_string(nodeId) + ".txt");
+
+    *udpServerStream->GetStream() << "Time (s)" << "\tPacket Size" 
+                                  << "\tSource Address" << "\tPacket Sequence" 
+                                  << "\tDelay" << std::endl;
+
+    Config::ConnectWithoutContext("/NodeList/" + std::to_string(nodeId) 
+                                    + "/ApplicationList/0/$ns3::UdpServer/RxWithAddresses",
+    MakeBoundCallback(&UdpServerTracer, udpServerStream));
+}
+
 /**
  * CWND tracer.
  *
