@@ -543,30 +543,47 @@ def graphRlcBuffers():
         return False
 
     num_buffers = len(buffers)
-    fig, ax = plt.subplots(num_buffers, 1, sharex='all', figsize=(7, 2.4*num_buffers))
+    
+    if num_buffers > 1:   # TCP
+        fig, ax = plt.subplots(num_buffers, 1, sharex='all', figsize=(7, 2.4*num_buffers))
 
-    plt.suptitle("RLC Buffers of UE(s) and Remote Host")
+        plt.suptitle("RLC Buffers of UE(s) and Remote Host")
 
-    for buffer, index in zip(buffers, range(0, len(buffers))):
+        for buffer, index in zip(buffers, range(0, len(buffers))):
+            
+            # Retrieve IP
+            IP = buffer.replace(PREFIX + "_", "").replace("_" + SUFFIX, "")
+
+            # Read data
+            data = pd.read_csv(HOMEPATH + buffer, sep="\t")
+            x = data['Time']
+            y = data['NumOfBuffers']
+
+            ax[index].plot(x, y)
+            ax[index].fill_between(x, y, color='#539ecd')
+            ax[index].tick_params('x', labelbottom=False)
+            ax[index].set_ylabel("Num. of packets")
+            ax[index].set_title("IP: " + IP)
         
-        # Retrieve IP
+        ax[index].tick_params('x', labelbottom=True)
+        ax[index].set_xlabel("Time [s]")
+        fig.savefig(HOMEPATH + SIM_PREFIX + "RlcBuffers.png")
+        plt.close()
+    
+    else:       # UDP
+        plt.suptitle("RLC Buffers of UE(s) and Remote Host")
+        plt.title(SUBTITLE)
+        buffer = buffers.pop()
         IP = buffer.replace(PREFIX + "_", "").replace("_" + SUFFIX, "")
-
-        # Read data
         data = pd.read_csv(HOMEPATH + buffer, sep="\t")
         x = data['Time']
         y = data['NumOfBuffers']
-
-        ax[index].plot(x, y)
-        ax[index].fill_between(x, y, color='#539ecd')
-        ax[index].tick_params('x', labelbottom=False)
-        ax[index].set_ylabel("Num. of packets")
-        ax[index].set_title("IP: " + IP)
-    
-    ax[index].tick_params('x', labelbottom=True)
-    ax[index].set_xlabel("Time [s]")
-    fig.savefig(HOMEPATH + SIM_PREFIX + "RlcBuffers.png")
-    plt.close()
+        plt.plot(x, y)
+        plt.fill_between(x, y, color='#539ecd')
+        plt.ylabel("Num. of packets")
+        plt.xlabel("IP: " + IP)
+        plt.savefig(HOMEPATH + SIM_PREFIX + "RlcBuffers.png")
+        plt.close()
 
     return True
 
@@ -856,12 +873,12 @@ if __name__ == "__main__":
     graphPathLoss()
     graphThrTx()
     graphThrRx()
+    graphRlcBuffers()
 
     # For TCP only
     if flowType == "TCP":
         graphThrRxRlcBuffer()
         graphThrRxPer()
-        graphRlcBuffers()
         graphTcpDelay()
         graphCWNDnInflightBytes()
         get_RTT(HOMEPATH + "mypcapfile-5-1.pcap")
