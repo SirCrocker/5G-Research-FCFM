@@ -42,7 +42,7 @@ const uint32_t UE_SYS_ID  = 0x2D2D4555; // UE System ID base (every UE starts fr
 const uint32_t RH_SYS_ID  = 0x2D2D4852; // RH System ID base
 
 /* Noise vars */
-const double NOISE_MEAN = 20;    // Default value is 5
+const double NOISE_MEAN = 25;    // Default value is 5
 const double NOISE_VAR = 2;     // Noise variance
 const double NOISE_BOUND = 10;   // Noise bound, read NormalDistribution for info about the parameter.
 
@@ -94,9 +94,9 @@ int main(int argc, char* argv[]) {
     double rlcBuffer;           // Se calcula más abajo, según serverType
 
     // CQI Probe own variables.
-    uint8_t cqiHighGain = 3;         // Step of CQI probe
-    Time ProbeCqiDuration = MilliSeconds(3);  // miliseconds
-    Time stepFrequency = Seconds(4);
+    uint8_t cqiHighGain = 4;         // Step of CQI probe
+    Time ProbeCqiDuration = MilliSeconds(500);  // miliseconds
+    Time stepFrequency = Seconds(2);
     // double cqiGainCycle[] = {5.0 / 4, 3.0 / 4 , 1, 1, 1, 1, 1, 1}; // Similar a BBR
 
     // Trace activation
@@ -175,7 +175,8 @@ int main(int argc, char* argv[]) {
     {
         LogComponentEnableAll(LOG_PREFIX_TIME);
         //LogComponentEnable("Packet", LOG_DEBUG);
-        // LogComponentEnableAll(LOG_ALL);
+        // LogComponentEnable("NrSpectrumPhy", LOG_INFO);
+        // LogComponentEnable("NrUePhy", LOG_DEBUG);
     }
 
     #pragma endregion logs
@@ -185,7 +186,7 @@ int main(int argc, char* argv[]) {
     ********************************************************************************************************************/
     #pragma region sv_tcp_scenario
 
-    // NrAmc::Set(cqiHighGain, ProbeCqiDuration, stepFrequency); // To configure the ProbeCQI algorithm
+    NrAmc::Set(cqiHighGain, ProbeCqiDuration, stepFrequency); // To configure the ProbeCQI algorithm
 
     if (serverType == "Remote")
     {
@@ -418,9 +419,11 @@ int main(int argc, char* argv[]) {
     
     std::string errorModel = "ns3::NrEesmIrT1"; //ns3::NrEesmCcT1, ns3::NrEesmCcT2, ns3::NrEesmIrT1, ns3::NrEesmIrT2, ns3::NrLteMiErrorModel
     
-    Config::SetDefault("ns3::NrAmc::ErrorModelType", TypeIdValue(TypeId::LookupByName(errorModel)));
-    Config::SetDefault("ns3::NrAmc::AmcModel", EnumValue(NrAmc::ErrorModel)); // NrAmc::ShannonModel // NrAmc::ErrorModel
+    // Config::SetDefault("ns3::NrAmc::ErrorModelType", TypeIdValue(TypeId::LookupByName(errorModel)));
+    // Config::SetDefault("ns3::NrAmc::AmcModel", EnumValue(NrAmc::ErrorModel)); // NrAmc::ShannonModel // NrAmc::ErrorModel
     //we need activate? : "ns3::BuildingsChannelConditionModel"
+    nrHelper->SetUlErrorModel(errorModel);
+    nrHelper->SetDlErrorModel(errorModel);
 
     std::string pathlossModel="ns3::ThreeGppUmaPropagationLossModel";
 
