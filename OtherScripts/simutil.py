@@ -35,7 +35,7 @@ BG_CYAN='\033[0;46m'
 #       return False
 #
 # ----------------------------------------------------------
-def info_n_time_decorator(name):
+def info_n_time_decorator(name, debug=False):
 
     def actual_decorator(func):
         @functools.wraps(func)
@@ -47,7 +47,7 @@ def info_n_time_decorator(name):
             try:
                 func_ret = func(*args, **kwargs)
             except Exception as e:
-                if False:
+                if debug:
                     print(f"Exception thrown: {e}")
                 func_ret = False
 
@@ -71,6 +71,7 @@ def checkUdpLoss(homepath: str, noisePresent):
     pcktSeqCopy.iloc[1:] = pcktSeqCopy.iloc[0:-1] + 1
     df['Packets Lost'] = df["Packet Sequence"] - pcktSeqCopy
     
-    print(f"Number of packets lost: {df['Packets Lost'].sum()}\tNoise: {noisePresent}", flush=True)
+    print(f"{YELLOW}Number of packets lost:{CLEAR} {df['Packets Lost'].sum()} \
+          \t{YELLOW}Noise:{CLEAR} {bool(int(noisePresent))}", flush=True)
 
     return True
