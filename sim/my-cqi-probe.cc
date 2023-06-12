@@ -32,7 +32,6 @@ using namespace ns3;
 auto tic = std::chrono::high_resolution_clock::now();       // Initial time
 auto itime = std::chrono::high_resolution_clock::now();     // Initial time 2
 double simTime = 7;            // in seconds
-Time timeRes = MilliSeconds(15); // Time to schedule the add noise function
 
 /* Auxiliary Vars */
 const uint32_t SGW_SYS_ID = 0x2D574753;
@@ -45,6 +44,7 @@ const uint32_t RH_SYS_ID  = 0x2D2D4852; // RH System ID base
 const double NOISE_MEAN = 25;    // Default value is 5
 const double NOISE_VAR = 2;     // Noise variance
 const double NOISE_BOUND = 10;   // Noise bound, read NormalDistribution for info about the parameter.
+const Time NOISE_T_RES = MilliSeconds(15); // Time to schedule the add noise function
 
 const double SEGMENT_SIZE = 1448.0;   // Maximum number of bytes a packet can have
 const std::string LOG_FILENAME = "output.log";
@@ -480,9 +480,9 @@ int main(int argc, char* argv[]) {
         Ptr<NrUePhy> uePhy = nrHelper->GetUePhy(ueNetDev.Get(0), 0);
         uePhy->SetNoiseFigure(NOISE_MEAN);
 
-        for (int i = 0; i < (Seconds(simTime) - Seconds(0.2)) / timeRes; i++)
+        for (int i = 0; i < (Seconds(simTime) - Seconds(0.2)) / NOISE_T_RES; i++)
         {
-            Simulator::Schedule(timeRes * i + Seconds(0.1), &AddRandomNoise, uePhy);
+            Simulator::Schedule(NOISE_T_RES * i + Seconds(0.1), &AddRandomNoise, uePhy);
         }
     }
 
