@@ -14,8 +14,8 @@ from scapy.all import rdpcap, TCP
 from OtherScripts.simutil import *
 
 if (len(sys.argv)>2):
-    HOMEPATH=sys.argv[1]+"/"
-    mainprobe=sys.argv[2]
+    HOMEPATH=sys.argv[1]+"/"    # Where to save the images
+    MAINPROBE=sys.argv[2]       # Where the images are located
 else:
     print("Not enough arguments. Put: {path_to_folder} {path_to_cqiprobe}")
     exit()
@@ -113,7 +113,7 @@ def graphMobility():
     mob = pd.read_csv(HOMEPATH + file, sep = "\t")
     mob.set_index('Time', inplace=True)
     ax1= mob.plot.scatter( x='x',y='y', ax=ax,title=title)
-    gNbicon=plt.imread(get_sample_data(f'{mainprobe}/gNb.png'))
+    gNbicon=plt.imread(get_sample_data(f'{MAINPROBE}/gNb.png'))
     gNbbox = OffsetImage(gNbicon, zoom = 0.25)
     for g in range(gNbNum):
         gNbPos=[gNbX,(gNbY+5+g*gNbD)]
@@ -125,7 +125,7 @@ def graphMobility():
             rect=mpatches.Rectangle((buildX+(buildLx+buildDx)*col,buildY+(buildLy+buildDy)*row),buildLx,buildLy, alpha=0.5, facecolor="red")
             plt.gca().add_patch(rect)
 
-    UEicon=plt.imread(get_sample_data(f'{mainprobe}/UE.png'))
+    UEicon=plt.imread(get_sample_data(f'{MAINPROBE}/UE.png'))
     UEbox = OffsetImage(UEicon, zoom = 0.02)
 
     for ue in mob['UE'].unique():
@@ -588,10 +588,10 @@ def graphRlcBuffers():
     return True
 
 # ----------------------------------------------------------
-# Delay | Only UDP
+# Delay | Only UDP | Uses NrDlPdcpRxStats.txt
 # ----------------------------------------------------------
-@info_n_time_decorator("UDP Delay")
-def graphUdpDelay():
+@info_n_time_decorator("PDCP Delay")
+def graphPdcpDelay():
     ###############
     ## Delay
     ###############
@@ -619,7 +619,62 @@ def graphUdpDelay():
     ax.set_ylabel("delay(s)")
     plt.suptitle(title)
     plt.title(SUBTITLE)
-    fig.savefig(HOMEPATH + SIM_PREFIX + 'Delay1' + '.png')
+    fig.savefig(HOMEPATH + SIM_PREFIX + 'PdcpDelay' + '.png')
+    plt.close()
+
+    return True
+
+# ----------------------------------------------------------
+# Delay | Only UDP | Uses delay by UDPServerHelper
+# ----------------------------------------------------------
+@info_n_time_decorator("UDP Delay")
+def graphUdpDelay():
+    
+    # We assume that there is only 1 UE
+    filepath = HOMEPATH + "UdpRecv_Node1.txt"
+    title = "Application Packet Delay"
+
+    udpstats = pd.read_csv(filepath, sep="\t")
+
+    time = udpstats["Time (s)"]
+    delay = udpstats["Delay"]
+
+    plt.plot(time, delay)
+    plt.suptitle(title)
+    plt.title(SUBTITLE)
+    plt.ylabel("Delay [s]")
+    plt.xlabel("Time [s]")
+    plt.savefig(HOMEPATH + SIM_PREFIX + "AppDelay" + ".png")
+    plt.close()
+
+    return True
+
+# ----------------------------------------------------------
+# Retransmission | Both
+# ----------------------------------------------------------
+@info_n_time_decorator("RTX", True)
+def graphRetransmissions():
+    
+    filepath = HOMEPATH + "RxPacketTrace.txt"
+    df = pd.read_csv(filepath, sep="\t")
+
+    rtxs = df[["Time", "rv", "corrupt"]]
+    # Successful retransmissions
+    succ_rtx = rtxs[(rtxs["rv"] != 0) & (rtxs["corrupt"] == 0)]
+    # Unsuccessful retransmissions
+    usuc_rtx = rtxs[(rtxs["rv"] == 3) & (rtxs["corrupt"] == 1)]
+
+    plt.scatter(usuc_rtx["Time"], usuc_rtx["rv"], marker="|", color="red", zorder=2)
+    plt.scatter(succ_rtx["Time"], succ_rtx["rv"], marker=".", zorder=3)
+    plt.legend(["Failed", "Successful"], loc="lower right")
+    plt.title("Total retransmissions")
+    plt.suptitle(SUBTITLE)
+    plt.ylim([0, 3.2])
+    plt.yticks([0, 1, 2, 3])
+    plt.grid(zorder=0)
+    plt.xlabel("Time [s]")
+    plt.ylabel("Number of Retransmission")
+    plt.savefig(HOMEPATH + SIM_PREFIX + "Rtx" + ".png")
     plt.close()
 
     return True
@@ -824,7 +879,7 @@ def get_RTT(pcap_filename):
     return True
 
 # ----------------------------------------------------------
-# GoodPut | Only UDP
+# GoodPut | Only UDP | TODO: ARREGLARLO
 # ----------------------------------------------------------
 @info_n_time_decorator("GoodPut")
 def graphGoodPut():
@@ -874,6 +929,7 @@ if __name__ == "__main__":
     graphThrTx()
     graphThrRx()
     graphRlcBuffers()
+    graphRetransmissions()
 
     # For TCP only
     if flowType == "TCP":
@@ -886,6 +942,7 @@ if __name__ == "__main__":
     # For UDP only
     if flowType == "UDP":
         graphUdpDelay()
+        graphPdcpDelay()
         # graphGoodPut()
         checkUdpLoss(HOMEPATH, addNoise)
         
