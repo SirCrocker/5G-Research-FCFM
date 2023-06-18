@@ -76,6 +76,7 @@ for item in test:
 SIM_PREFIX = tcpTypeId + '-'+ serverType + '-' + str(rlcBufferPerc) + '-'
 
 # Other stuff
+RESAMPLED_DF = pd.timedelta_range("0s", f"{simTime}s", freq=f"{resamplePeriod}ms").to_frame(name="Time")
 
 if tcpTypeId=="TcpNewReno":
     points=np.array([2, 15, 21, 35, 39])
@@ -658,24 +659,57 @@ def graphRetransmissions():
     filepath = HOMEPATH + "RxPacketTrace.txt"
     df = pd.read_csv(filepath, sep="\t")
 
-    rtxs = df[["Time", "rv", "corrupt"]]
-    # Successful retransmissions
-    succ_rtx = rtxs[(rtxs["rv"] != 0) & (rtxs["corrupt"] == 0)]
-    # Unsuccessful retransmissions
-    usuc_rtx = rtxs[(rtxs["rv"] == 3) & (rtxs["corrupt"] == 1)]
+    rtxs = df[["Time", "rv", "corrupt"]].copy()
+    rtxs["Time"] = pd.to_timedelta(rtxs["Time"], unit="s")
+    rtxs.index += 5
+    rtxs.loc[0] = [pd.Timedelta(0), 0, 0]
+    rtxs.loc[1] = [pd.Timedelta(0), 1, 0]
+    rtxs.loc[2] = [pd.Timedelta(0), 2, 0]
+    rtxs.loc[3] = [pd.Timedelta(0), 3, 0]
+    rtxs.loc[4] = [pd.Timedelta(0), 3, 1]
+    rtxs = rtxs.sort_index()
 
-    plt.scatter(usuc_rtx["Time"], usuc_rtx["rv"], marker="|", color="red", zorder=2)
-    plt.scatter(succ_rtx["Time"], succ_rtx["rv"], marker=".", zorder=3)
-    plt.legend(["Failed", "Successful"], loc="lower right")
-    plt.title("Total retransmissions")
-    plt.suptitle(SUBTITLE)
-    plt.ylim([0, 3.2])
-    plt.yticks([0, 1, 2, 3])
-    plt.grid(zorder=0)
-    plt.xlabel("Time [s]")
-    plt.ylabel("Number of Retransmission")
-    plt.savefig(HOMEPATH + SIM_PREFIX + "Rtx" + ".png")
-    plt.close()
+    # Successful retransmissions
+    succ_rtx = rtxs[rtxs["corrupt"] == 0]
+    # Unsuccessful retransmissions
+    fail_rtx = rtxs[(rtxs["rv"] == 3) & (rtxs["corrupt"] == 1)]
+
+    succ_zero = succ_rtx[succ_rtx["rv"] == 0].copy().resample(f"{resamplePeriod}ms", on="Time").size().to_frame(name="Zero").copy()
+    succ_zero.iloc[0] -= 1
+    succ_once = succ_rtx[succ_rtx["rv"] == 1].copy().resample(f"{resamplePeriod}ms", on="Time").size().to_frame(name="One").copy()
+    succ_once.iloc[0] -= 1
+    succ_twice = succ_rtx[succ_rtx["rv"] == 2].copy().resample(f"{resamplePeriod}ms", on="Time").size().to_frame(name="Two").copy()
+    succ_twice.iloc[0] -= 1
+    succ_three = succ_rtx[succ_rtx["rv"] == 2].copy().resample(f"{resamplePeriod}ms", on="Time").size().to_frame(name="Three").copy()
+    succ_three.iloc[0] -= 1
+    failure = fail_rtx.resample(f"{resamplePeriod}ms", on="Time").size().to_frame(name="Fail").copy()
+    failure.iloc[0] -= 1
+
+    data = RESAMPLED_DF.join([succ_zero, succ_once, succ_twice, succ_three, failure]).drop("Time", axis=1).fillna(0)
+    data["Total"] = data.sum(axis=1)
+    data["S Total"] = data[["Zero", "One", "Two", "Three"]].sum(axis=1)
+
+    data[["Zero", "One", "Two", "Three"]] = 100 * data[["Zero", "One", "Two", "Three"]].div(data["S Total"], axis=0).fillna(0)
+    data[["S Total", "Fail"]] = 100 * data[["S Total", "Fail"]].div(data["Total"], axis=0).fillna(0)
+
+    f, (ax_succ, ax_both) = plt.subplots(2, 1, gridspec_kw={'height_ratios': [3, 1]})
+    plt.subplots_adjust(hspace=0.5)
+    f.suptitle("Retransmissions in MAC Layer")
+    succ_colors = ["#019875", "#72CC50", "#BFD834", "#00AEAD"]
+    ax_succ.stackplot(data.index.total_seconds(), data["Zero"], data["One"], data["Two"], data["Three"], colors=succ_colors)
+    ax_succ.legend(["0 RTX", "1 RTX", "2 RTX", "3 RTX"], loc="lower right")
+    ax_succ.set_title("Number of RTX needed for a successful block reception")
+    ax_succ.set_xlabel("Time [s]")
+    ax_succ.set_ylabel("Percentage [%]")
+
+    both_colors = ["#019875", "#BE0000"]
+    ax_both.stackplot(data.index.total_seconds(), data["S Total"], data["Fail"], colors=both_colors)
+    ax_both.legend(["Successful", "Failed"], loc="lower right")
+    ax_both.set_title("Distribution of successful and failed retransmissions")
+    ax_both.set_xlabel("Time [s]")
+    ax_both.set_ylabel("Percentage [%]")
+    ax_both.set_yticks((0, 50, 100))
+    ax_both.yaxis.grid(True)
 
     return True
 
@@ -913,6 +947,34 @@ def graphGoodPut():
 
     return True
 
+# ----------------------------------------------------------
+# Phy Throughput | Both
+# ----------------------------------------------------------
+@info_n_time_decorator("Phy Thr")
+def graphPhyThroughput():
+    
+    filepath = HOMEPATH + "RxPacketTrace.txt"
+    df = pd.read_csv(filepath, sep="\t")
+
+    df = df[["Time", "tbSize", "corrupt"]].copy()
+
+    # Successful retransmissions
+    df = df[df["corrupt"] == 0].copy()
+    df["DeltaT"] = df["Time"].diff()    # RESAMPLE BEFORE, GET NUM OF BYTES IN THAT TIMEFRAME
+    df.dropna(inplace=True)
+    df['Mbps'] = (df["tbSize"] * 8 / df["DeltaT"]) / 1e6
+    df.index = pd.to_datetime(df["Time"], unit="s")
+    df = df.resample(f"{resamplePeriod}ms").mean()
+
+    plt.plot(df.index.microsecond / 1e6 + df.index.second, df["Mbps"])
+    plt.title("PHY Throughput vs Time")
+    plt.suptitle(SUBTITLE)
+    plt.xlabel("Time [s]")
+    plt.ylabel("Throughput [Mbps]")
+    plt.savefig(HOMEPATH + SIM_PREFIX + "Phy-ThrRx" + ".png")
+    plt.close()
+
+    return True
 
 #   | * ---- * ---- * ---- * |
 #   |  Call graph functions  |
@@ -928,6 +990,7 @@ if __name__ == "__main__":
     graphPathLoss()
     graphThrTx()
     graphThrRx()
+    # graphPhyThroughput()
     graphRlcBuffers()
     graphRetransmissions()
 
