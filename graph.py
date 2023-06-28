@@ -712,7 +712,7 @@ def graphRetransmissions():
     both_colors = ["#019875", "#BE0000"]
     ax_both.stackplot(data.index.total_seconds(), data["S Total"], data["Fail"], colors=both_colors)
     ax_both.legend(["Successful", "Failed"], loc="lower right")
-    ax_both.set_title("Distribution of successful and failed retransmissions")
+    ax_both.set_title("Proportion of successful and failed retransmissions")
     ax_both.set_xlabel("Time [s]")
     ax_both.set_ylabel("Percentage [%]")
     ax_both.set_yticks((0, 50, 100))
