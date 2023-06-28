@@ -94,9 +94,9 @@ int main(int argc, char* argv[]) {
     double rlcBuffer;           // Se calcula más abajo, según serverType
 
     // CQI Probe own variables.
-    uint8_t cqiHighGain = 4;         // Step of CQI probe
-    Time ProbeCqiDuration = MilliSeconds(500);  // miliseconds
-    Time stepFrequency = Seconds(2);
+    uint8_t cqiHighGain = 2;         // Step of CQI probe
+    Time ProbeCqiDuration = MilliSeconds(20);  // miliseconds
+    Time stepFrequency = MilliSeconds(500); // miliseconds
     // double cqiGainCycle[] = {5.0 / 4, 3.0 / 4 , 1, 1, 1, 1, 1, 1}; // Similar a BBR
 
     // Trace activation
@@ -186,7 +186,7 @@ int main(int argc, char* argv[]) {
     ********************************************************************************************************************/
     #pragma region sv_tcp_scenario
 
-    NrAmc::Set(cqiHighGain, ProbeCqiDuration, stepFrequency); // To configure the ProbeCQI algorithm
+    // NrAmc::Set(cqiHighGain, ProbeCqiDuration, stepFrequency); // To configure the ProbeCQI algorithm
 
     if (serverType == "Remote")
     {
@@ -197,15 +197,9 @@ int main(int argc, char* argv[]) {
         serverDelay = 0.004;
     }
     
-    if (flowType == "TCP")
-    {
-        rlcBuffer = round(dataRate*1e6/8*serverDelay*rlcBufferPerc/100); // Bytes BDP=250Mbps*100ms default: 999999999
-    }
-    else
-    {
-        rlcBuffer = UINT32_MAX;
-        rlcBufferPerc = 99999;
-    }
+
+    rlcBuffer = round(dataRate*1e6/8*serverDelay*rlcBufferPerc/100); // Bytes BDP=250Mbps*100ms default: 999999999
+
     /**
      * Default values for the simulation. We are progressively removing all
      * the instances of SetDefault, but we need it for legacy code (LTE)
@@ -663,8 +657,9 @@ int main(int argc, char* argv[]) {
     inif << "rlcBufferPerc = " << rlcBufferPerc << std::endl;
     inif << "serverType = " << serverType << std::endl;
     inif << "dataRate = " << dataRate << std::endl;
-    inif << "cqiHighGain = " << cqiHighGain << std::endl;
-    inif << "ProbeCqiDuration = " << ProbeCqiDuration << std::endl;
+    inif << "cqiHighGain = " << +cqiHighGain << std::endl;
+    inif << "ProbeCqiDuration = " << ProbeCqiDuration.GetSeconds()*1000 << " ms" << std::endl;
+    inif << "stepFrequency = " << stepFrequency.GetSeconds()*1000 << " ms" << std::endl;
     inif << "addNoise = " << addNoise << std::endl;
 
     inif << std::endl;
@@ -790,6 +785,7 @@ processFlowMonitor(Ptr<FlowMonitor> monitor, Ptr<ns3::FlowClassifier> flowClassi
             outFile << "  Mean jitter: 0 ms\n";
         }
         outFile << "  Rx Packets: " << i->second.rxPackets << "\n";
+        outFile << "  Lost Packets: " <<  (i->second.txPackets - i->second.rxPackets) << "\n";
     }
 
     outFile << "\n\n  Mean flow throughput: " << averageFlowThroughput / stats.size() << "\n";

@@ -140,7 +140,7 @@ def graphMobility():
     ax.set_ylabel("Distance [m]")
 
 
-    fig.savefig(HOMEPATH + SIM_PREFIX + title +'.png')
+    fig.savefig(HOMEPATH + SIM_PREFIX + title +'.png', dpi=300)
     plt.close()
 
     return True
@@ -164,7 +164,7 @@ def graphSinrCtrl():
     ax.set_xlabel("Time(s)")
     plt.suptitle(title)
     plt.title(SUBTITLE)
-    fig.savefig(HOMEPATH + SIM_PREFIX + "SinrCtrl" +'.png')
+    fig.savefig(HOMEPATH + SIM_PREFIX + "SinrCtrl" +'.png', dpi=300)
     plt.close()
 
     return True
@@ -202,7 +202,7 @@ def graphSinrData():
     ax.set_xlabel("Time(s)")
     plt.suptitle(title)
     plt.title(SUBTITLE)
-    fig.savefig(HOMEPATH + SIM_PREFIX + "SinrData" + '.png')
+    fig.savefig(HOMEPATH + SIM_PREFIX + "SinrData" + '.png', dpi=300)
     plt.close()
 
     return True
@@ -227,7 +227,7 @@ def graphCQI():
     ax.set_xlabel("Time(s)")
     plt.suptitle(title)
     plt.title(SUBTITLE)
-    fig.savefig(HOMEPATH + SIM_PREFIX + title +'.png')
+    fig.savefig(HOMEPATH + SIM_PREFIX + title +'.png', dpi=300)
     plt.close()
 
     return True
@@ -257,17 +257,24 @@ def graphTbler():
     bler=bler.set_index('Time')
 
     for i in range(bler['rnti'].max()):
-        plt.semilogy(bler.index, bler[bler['rnti']==i+1].TBler, label=str(i+1))
+        plt.semilogy(bler.index, bler[bler['rnti']==i+1].TBler, label='BLER')
 
+    # Trazar línea horizontal en y = 0.1
+    plt.axhline(y=0.1, color='green', linestyle='--', label='BLER = 0.1')
+    # Trazar línea horizontal en y = 0.5
+    plt.axhline(y=0.5, color='red', linestyle='--', label='BLER = 0.5')
+    
+    plt.legend(loc='center left', bbox_to_anchor=(1, 0.5))
     plt.xlabel("Time(s)")
     plt.ylabel("BLER")
+    plt.ylim(bottom=None, top=10**0)
     # ax.set_ylim([abs(min([(1e-20) ,BLER.TBler.min()*0.9])) , 1])
     # plt.legend()
     plt.title(title)
     plt.grid(True, which="both", ls="-")
     plt.suptitle(title)
     plt.title(SUBTITLE)
-    fig.savefig(HOMEPATH + SIM_PREFIX + 'Tbler' + '.png')
+    fig.savefig(HOMEPATH + SIM_PREFIX + 'Tbler' + '.png', dpi=300, bbox_inches='tight')
     plt.close()
 
     return True
@@ -289,7 +296,7 @@ def graphPathLoss():
     ploos.groupby(['IMSI'])['pathLoss(dB)'].plot(title=file)
     plt.suptitle(title)
     plt.title(SUBTITLE)
-    fig.savefig(HOMEPATH + SIM_PREFIX + "PathLoss" + '.png')
+    fig.savefig(HOMEPATH + SIM_PREFIX + "PathLoss" + '.png', dpi=300)
     plt.close()
 
     return True
@@ -327,7 +334,7 @@ def graphThrTx():
     plt.suptitle(title)
     plt.title(SUBTITLE)
 
-    fig.savefig(HOMEPATH + SIM_PREFIX + 'ThrTx' + '.png')
+    fig.savefig(HOMEPATH + SIM_PREFIX + 'ThrTx' + '.png', dpi=300)
     plt.close()
 
     return True
@@ -369,7 +376,7 @@ def graphThrRx():
 
     plt.suptitle(title)
     plt.title(SUBTITLE)
-    fig.savefig(HOMEPATH + SIM_PREFIX + 'ThrRx' + '.png')
+    fig.savefig(HOMEPATH + SIM_PREFIX + 'ThrRx' + '.png', dpi=300)
     plt.close()
 
     return True
@@ -455,7 +462,7 @@ def graphThrRxRlcBuffer():
 
         plt.suptitle(title)
         plt.title(SUBTITLE)
-        fig.savefig(HOMEPATH + SIM_PREFIX + 'ThrRx-' + z + '.png')
+        fig.savefig(HOMEPATH + SIM_PREFIX + 'ThrRx-' + z + '.png', dpi=300)
         plt.close()
 
     return True
@@ -519,7 +526,7 @@ def graphThrRxPer():
 
         plt.suptitle(title)
         plt.title(SUBTITLE)
-        fig.savefig(HOMEPATH + SIM_PREFIX + 'ThrDrp' +'-'+ z+ '.png')
+        fig.savefig(HOMEPATH + SIM_PREFIX + 'ThrDrp' +'-'+ z+ '.png', dpi=300)
         plt.close()
     
     return True
@@ -568,7 +575,7 @@ def graphRlcBuffers():
         
         ax[index].tick_params('x', labelbottom=True)
         ax[index].set_xlabel("Time [s]")
-        fig.savefig(HOMEPATH + SIM_PREFIX + "RlcBuffers.png")
+        fig.savefig(HOMEPATH + SIM_PREFIX + "RlcBuffers.png", dpi=300)
         plt.close()
     
     else:       # UDP
@@ -583,7 +590,7 @@ def graphRlcBuffers():
         plt.fill_between(x, y, color='#539ecd')
         plt.ylabel("Num. of packets")
         plt.xlabel("IP: " + IP)
-        plt.savefig(HOMEPATH + SIM_PREFIX + "RlcBuffers.png")
+        plt.savefig(HOMEPATH + SIM_PREFIX + "RlcBuffers.png", dpi=300)
         plt.close()
 
     return True
@@ -620,7 +627,7 @@ def graphPdcpDelay():
     ax.set_ylabel("delay(s)")
     plt.suptitle(title)
     plt.title(SUBTITLE)
-    fig.savefig(HOMEPATH + SIM_PREFIX + 'PdcpDelay' + '.png')
+    fig.savefig(HOMEPATH + SIM_PREFIX + 'PdcpDelay' + '.png', dpi=300)
     plt.close()
 
     return True
@@ -645,7 +652,7 @@ def graphUdpDelay():
     plt.title(SUBTITLE)
     plt.ylabel("Delay [s]")
     plt.xlabel("Time [s]")
-    plt.savefig(HOMEPATH + SIM_PREFIX + "AppDelay" + ".png")
+    plt.savefig(HOMEPATH + SIM_PREFIX + "AppDelay" + ".png", dpi=300)
     plt.close()
 
     return True
@@ -710,7 +717,8 @@ def graphRetransmissions():
     ax_both.set_ylabel("Percentage [%]")
     ax_both.set_yticks((0, 50, 100))
     ax_both.yaxis.grid(True)
-
+    f.savefig(HOMEPATH + SIM_PREFIX + "Rtx" + ".png", dpi=300)
+    plt.close()
     return True
 
 # ----------------------------------------------------------
@@ -767,7 +775,7 @@ def graphTcpDelay():
         ax.set_ylim(0, ret['rtt'].loc[x:y].max()*1.1)
         plt.suptitle(title)
         plt.title(SUBTITLE)
-        fig.savefig(HOMEPATH + SIM_PREFIX + 'RTT' +'-'+ z+ '.png')
+        fig.savefig(HOMEPATH + SIM_PREFIX + 'RTT' +'-'+ z+ '.png', dpi=300)
         plt.close()
 
     return True
@@ -818,7 +826,7 @@ def graphCWNDnInflightBytes():
                 plt.title(SUBTITLE)
                 ax.set_ylabel("CWD [KBytes]")
  
-                fig.savefig(HOMEPATH + SIM_PREFIX + 'cwnd-'+str(u)+'-'+ z+'.png')
+                fig.savefig(HOMEPATH + SIM_PREFIX + 'cwnd-'+str(u)+'-'+ z+'.png', dpi=300)
 
                 plt.close()
 
@@ -845,7 +853,7 @@ def graphCWNDnInflightBytes():
             plt.suptitle(title)
             plt.title(SUBTITLE)
 
-            fig.savefig(HOMEPATH + SIM_PREFIX + "InflightBytes-UE" + str(u) + '.png')
+            fig.savefig(HOMEPATH + SIM_PREFIX + "InflightBytes-UE" + str(u) + '.png', dpi=300)
 
     plt.close()
 
@@ -908,7 +916,7 @@ def get_RTT(pcap_filename):
     plt.ylabel('RTT [ms]')
     plt.title('RTT 2')
     plt.grid(True)
-    fig.savefig(HOMEPATH + SIM_PREFIX + 'RTT_2.png')
+    fig.savefig(HOMEPATH + SIM_PREFIX + 'RTT_2.png', dpi=300)
 
     return True
 
@@ -942,7 +950,7 @@ def graphGoodPut():
     plt.title("GoodPut")
     plt.ylabel("Throughput (Mbps)")
     plt.xlabel("Time (s)")
-    plt.savefig(HOMEPATH + SIM_PREFIX + "GoodPut.png")
+    plt.savefig(HOMEPATH + SIM_PREFIX + "GoodPut.png", dpi=300)
     plt.close()
 
     return True
@@ -971,7 +979,7 @@ def graphPhyThroughput():
     plt.suptitle(SUBTITLE)
     plt.xlabel("Time [s]")
     plt.ylabel("Throughput [Mbps]")
-    plt.savefig(HOMEPATH + SIM_PREFIX + "Phy-ThrRx" + ".png")
+    plt.savefig(HOMEPATH + SIM_PREFIX + "Phy-ThrRx" + ".png", dpi=300)
     plt.close()
 
     return True

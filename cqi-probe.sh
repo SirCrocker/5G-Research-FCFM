@@ -8,7 +8,7 @@ tic=$(date +%s)
 
 # Default values
 serverType='Edge'
-rlcBufferPer=10
+rlcBufferPer=100
 tcpTypeId='UDP'
 mobilityVal=0
 build_ns3=1

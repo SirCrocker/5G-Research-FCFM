@@ -341,7 +341,7 @@ NrAmc::MyCqi()
     {
     case OUT_STEP:
 
-        if ( ((curr_time - m_lastActivationTime) > m_stepFrequency) && (cqi > 7) )
+        if ( (curr_time - m_lastActivationTime) > m_stepFrequency )
         {
             m_currentState = IN_STEP;
             m_lastActivationTime = curr_time;
