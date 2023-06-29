@@ -155,6 +155,8 @@ int main(int argc, char* argv[]) {
     cmd.AddValue("enableBuildings", "If set to 1, enable Buildings", enableBuildings);
     cmd.AddValue("shadowing", "If set to 1, enable Shadowing", shadowing);
     cmd.AddValue("cqiHighGain", "Steps of CQI Probe. Means CQI=round(CQI*cqiHighGain)", cqiHighGain);
+    cmd.AddValue("ProbeCqiDuration", "Duration of the Probe CQI override in s.", ProbeCqiDuration);
+    cmd.AddValue("stepFrequency", "Time between activations of Probe CQI in s", stepFrequency);
     cmd.AddValue("addNoise", "Add normal distributed noise to the simulation", addNoise);
 
     cmd.Parse(argc, argv);
