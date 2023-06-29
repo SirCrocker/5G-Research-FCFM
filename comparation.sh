@@ -1,7 +1,9 @@
 #!/bin/bash
+# Color and paths vars are imported
+source "paths.cfg"
 
-output_file="/home/diego/ns-3-dev/scratch/ProbeCQI/out/comparation.txt"
-control_folder="/home/diego/ns-3-dev/scratch/ProbeCQI/out/control"
+output_file=$RUTA_PROBE"/out/comparation.txt"
+control_folder="${RUTA_PROBE}/control/"
 control_thr=0
 
 # Borra el contenido previo del archivo de comparación si existe
@@ -21,8 +23,8 @@ if [ -d "$control_folder" ] && [ -f "$control_folder/FlowOutput.txt" ]; then
 fi
 
 # Recorre todas las carpetas en /home/diego/ns-3-dev/scratch/ProbeCQI/out
-for folder in /home/diego/ns-3-dev/scratch/ProbeCQI/out/*; do
-    if [ -d "$folder" ]; then
+for folder in "$RUTA_PROBE/out/"*; do
+    if [[ -d "$folder" ]]; then
         folder_name=$(basename "$folder")  # Obtiene el nombre de la carpeta
         
         # Verifica si existe el archivo FlowOutput.txt en la carpeta actual
