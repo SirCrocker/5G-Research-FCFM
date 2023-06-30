@@ -921,7 +921,7 @@ def get_RTT(pcap_filename):
     return True
 
 # ----------------------------------------------------------
-# GoodPut | Only UDP | TODO: ARREGLARLO
+# GoodPut | Only UDP
 # ----------------------------------------------------------
 @info_n_time_decorator("GoodPut")
 def graphGoodPut():
@@ -932,24 +932,25 @@ def graphGoodPut():
     filepath = HOMEPATH + "UdpRecv_Node1.txt"
     df = pd.read_csv(filepath, sep="\t")
 
-    # We group the packets that arrived at the same time
-    df = df.groupby(timeCol, as_index=False)["Packet Size"].sum()
+    df[timeCol] = pd.to_timedelta(df[timeCol], unit="s")
+    df.index += 1
+    df.loc[0] = [pd.Timedelta(0), 0, 0, 0, 0]
+    df.sort_index(inplace=True)
 
-    # We calculate the time between the last packet received and
-    # the current
-    arrivalTime = df[timeCol].copy()
-    arrivalTime.iloc[1:] = arrivalTime[0:-1]
-    df["Delta Time"] = df[timeCol] - arrivalTime
+    resampled = df.copy().resample(f"{resamplePeriod}ms", on=timeCol)
+    new_df = resampled['Packet Size'].sum().to_frame(name='Bytes').copy()
+    new_df = RESAMPLED_DF.join([new_df]).drop('Time', axis=1).fillna(0)
 
-    # The first column has a time of 0.0 s, so we drop it to 
-    # calculate the goodput
-    df.drop(index=0, axis=1, inplace=True)
-    df["GoodPut (Mbps)"] = (df["Packet Size"] * 8 / df['Delta Time']) / 1e6
+    # THR = bits / ( ( time in a period in secs ) * bits in a megabit )
+    new_df["GoodPut (Mbps)"] = (new_df["Bytes"] * 8 / ( (resamplePeriod * 1e-3) * 1e6))
 
-    plt.plot(df[timeCol], df["GoodPut (Mbps)"])
-    plt.title("GoodPut")
-    plt.ylabel("Throughput (Mbps)")
-    plt.xlabel("Time (s)")
+    plt.plot(new_df.index.total_seconds(), new_df["GoodPut (Mbps)"])
+    plt.suptitle("Throughput in Application layer")
+    plt.title(SUBTITLE)
+    plt.ylabel("Throughput [Mb/s]")
+    plt.xlabel("Time [s]")
+    plt.xlim([0, simTime])
+    plt.ylim([0, new_df["GoodPut (Mbps)"].max()+5])
     plt.savefig(HOMEPATH + SIM_PREFIX + "GoodPut.png", dpi=300)
     plt.close()
 
@@ -1014,6 +1015,6 @@ if __name__ == "__main__":
     if flowType == "UDP":
         graphUdpDelay()
         graphPdcpDelay()
-        # graphGoodPut()
+        graphGoodPut()
         checkUdpLoss(HOMEPATH, addNoise)
         
