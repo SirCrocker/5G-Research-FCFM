@@ -194,12 +194,24 @@ class NrAmc : public Object
     static uint8_t MyCqi();
     // Linear interpolation
     static double lerp(double x, std::pair<double, double> xy0, std::pair<double, double> xy1);
+    uint8_t ProbeCqiAlgorithm(const SpectrumValue& sinr, uint8_t& mcs) const;
+    uint8_t OriginalCqiAlgorithm(const SpectrumValue& sinr, uint8_t& mcs) const;
+    uint8_t ProbeBlerAlgorithm(const SpectrumValue& sinr, uint8_t& mcs) const;
 
     enum State {
         IN_STEP,
         OUT_STEP
     };
 
+    enum CqiAlgorithm {
+      LENA_DEFAULT,
+      PROBE_CQI,
+      PROBE_BLER
+    };
+
+    static void SetCqiModel(NrAmc::CqiAlgorithm algorithm);
+
+    inline static CqiAlgorithm m_cqiModel = LENA_DEFAULT;
     inline static bool m_active = false;
     inline static State m_currentState = OUT_STEP;
     inline static uint8_t m_cqiGain = 0;
