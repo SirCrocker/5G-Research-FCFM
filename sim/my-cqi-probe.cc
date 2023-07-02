@@ -188,7 +188,8 @@ int main(int argc, char* argv[]) {
     ********************************************************************************************************************/
     #pragma region sv_tcp_scenario
 
-    // NrAmc::Set(cqiHighGain, ProbeCqiDuration, stepFrequency); // To configure the ProbeCQI algorithm
+    NrAmc::SetCqiModel(NrAmc::PROBE_CQI);
+    NrAmc::Set(cqiHighGain, ProbeCqiDuration, stepFrequency); // To configure the ProbeCQI algorithm
 
     if (serverType == "Remote")
     {
