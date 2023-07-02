@@ -307,6 +307,13 @@ NrAmc::CreateCqiFeedbackWbTdma(const SpectrumValue& sinr, uint8_t& mcs) const
     return cqi;
 }
 
+double
+NrAmc::lerp(double x, std::pair<double, double> xy0, std::pair<double, double> xy1)
+{
+    double y = xy0.second + (x - xy0.first) * (xy1.second - xy0.second) / (xy1.first - xy0.first);
+    return y;
+}
+
 bool
 NrAmc::Set(const uint8_t cqiGain, Time stepDuration, Time stepFrequency)
 {

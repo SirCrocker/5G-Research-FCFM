@@ -187,8 +187,13 @@ class NrAmc : public Object
      */
     uint32_t GetPayloadSize(uint8_t mcs, uint32_t nprb) const;
 
+    /**
+     * Custom functions, they are used for ProbeCQI
+    */
     static bool Set(const uint8_t cqiGain, Time stepDuration, Time stepFrequency);
     static uint8_t MyCqi();
+    // Linear interpolation
+    static double lerp(double x, std::pair<double, double> xy0, std::pair<double, double> xy1);
 
     enum State {
         IN_STEP,
