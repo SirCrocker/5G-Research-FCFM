@@ -1,7 +1,7 @@
 #include "ns3/nr-eesm-t1.h"
 #include <fstream>
 
-std::string infostr = R"V0G0N(// Copyright (c) 2022 Centre Tecnologic de Telecomunicacions de Catalunya (CTTC)
+std::string infostr = R"ASADO(// Copyright (c) 2022 Centre Tecnologic de Telecomunicacions de Catalunya (CTTC)
 // Interpolated by the ProbeBLER crew (asado?)
 // SPDX-License-Identifier: GPL-2.0-only
 
@@ -70,8 +70,105 @@ static const std::vector<double> SpectralEfficiencyForCqi1 = {0.0, // out of ran
 
 /**
  * \brief SINR to BLER mapping for MCSs in Table1
- */)V0G0N";
+ */)ASADO";
 
+
+std::string endstring = R"ASADO(/**
+ * \brief Table of beta values for each standard MCS in Table1 in TS38.214
+ */
+static const std::vector<double> BetaTable1 = {
+    1.6,   1.61,  1.63,  1.65,  1.67,  1.7,   1.73,  1.76,  1.79,  1.82,
+    3.97,  4.27,  4.71,  5.16,  5.66,  6.16,  6.5,   9.95,  10.97, 12.92,
+    14.96, 17.06, 19.33, 21.85, 24.51, 27.14, 29.94, 32.05, 34.28};
+
+/**
+ * \brief Table of ECR of the standard MCSs: 29 MCSs as per Table1 in TS38.214
+ */
+static const std::vector<double> McsEcrTable1 = {
+    // QPSK (M=2)
+    0.12,
+    0.15,
+    0.19,
+    0.25,
+    0.30,
+    0.37,
+    0.44,
+    0.51,
+    0.59,
+    0.66, // ECRs of MCSs
+    // 16QAM (M=4)
+    0.33,
+    0.37,
+    0.42,
+    0.48,
+    0.54,
+    0.60,
+    0.64, // ECRs of MCSs
+    // 64QAM (M=6)
+    0.43,
+    0.46,
+    0.50,
+    0.55,
+    0.60,
+    0.65,
+    0.70,
+    0.75,
+    0.80,
+    0.85,
+    0.89,
+    0.93 // ECRs of MCSs
+};
+
+/**
+ * \brief Table of modulation order of the standard MCSs: 29 MCSs as per Table1
+ * in TS38.214
+ */
+static const std::vector<uint8_t> McsMTable1 = {
+    // QPSK (M=2)
+    2,
+    2,
+    2,
+    2,
+    2,
+    2,
+    2,
+    2,
+    2,
+    2,
+    // 16QAM (M=4)
+    4,
+    4,
+    4,
+    4,
+    4,
+    4,
+    4,
+    // 64QAM (M=6)
+    6,
+    6,
+    6,
+    6,
+    6,
+    6,
+    6,
+    6,
+    6,
+    6,
+    6,
+    6};
+
+NrEesmT1::NrEesmT1()
+{
+    m_betaTable = &BetaTable1;
+    m_mcsEcrTable = &McsEcrTable1;
+    m_simulatedBlerFromSINR = &BlerForSinr1;
+    m_mcsMTable = &McsMTable1;
+    m_spectralEfficiencyForMcs = &SpectralEfficiencyForMcs1;
+    m_spectralEfficiencyForCqi = &SpectralEfficiencyForCqi1;
+}
+
+} // namespace ns3
+)ASADO";
 
 using namespace ns3;
 
@@ -119,16 +216,16 @@ int main()
                 {
                     if (sinrval == sinrvector.back() and !found_last)
                     {
-                        outfile << sinrval;
+                        outfile << std::setprecision(6) << std::scientific << sinrval;
                         found_last = true;
                     }
                     else if (found_last)
                     {
-                        outfile << ", FOUNDLAST " << sinrval; 
+                        outfile << ", " << std::setprecision(6) << std::scientific << sinrval; 
                     }
                     else
                     {
-                    outfile << sinrval << ", ";
+                    outfile << std::setprecision(6) << std::scientific << sinrval << ", ";
                     }
                 }
                 found_last = false;
@@ -137,16 +234,16 @@ int main()
                 {
                     if (blerval == blervectro.back() and !found_last)
                     {
-                        outfile << blerval;
+                        outfile << std::setprecision(6) << std::scientific << blerval;
                         found_last = true;
                     }
                     else if (found_last)
                     {
-                        outfile << ", " << blerval; 
+                        outfile << ", " << std::setprecision(6) << std::scientific << blerval; 
                     }
                     else
                     {
-                    outfile << blerval << ", ";
+                    outfile << std::setprecision(6) << std::scientific << blerval << ", ";
                     }
                 }
                 outfile << "} // BLER" << std::endl;
@@ -160,12 +257,12 @@ int main()
             mcsIndex++;
         }
         
-
+        mcsIndex = 0;
         outfile << "}," << std::endl;
         BsgIndex++;
     }
     outfile << "};" << std::endl;
-    outfile << "} // namespace ns3" << std::endl;
+    outfile << endstring << std::endl;
 
     return 0;
 }
