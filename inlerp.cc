@@ -1,6 +1,7 @@
 #include "ns3/nr-eesm-t1.h"
 #include <fstream>
 
+#pragma region
 std::string infostr = R"ASADO(// Copyright (c) 2022 Centre Tecnologic de Telecomunicacions de Catalunya (CTTC)
 // Interpolated by the ProbeBLER crew (asado?)
 // SPDX-License-Identifier: GPL-2.0-only
@@ -170,12 +171,16 @@ NrEesmT1::NrEesmT1()
 } // namespace ns3
 )ASADO";
 
+#pragma endregion
+
 using namespace ns3;
 
 std::vector<std::vector<double>> interpolarPuntos(const std::vector<double>& X, const std::vector<double>& Y, int n);
 
 int main()
 {
+    int num_values = 10;  // Total number of values will be num_values+2 because the first and last values are kept
+
     NrEesmT1 table;
     auto* tt = table.m_simulatedBlerFromSINR;
 
@@ -203,7 +208,7 @@ int main()
                 auto& sinr = std::get<0>(CBS.second);
                 auto& bler = std::get<1>(CBS.second);
 
-                std::vector<std::vector<double>> interpVals = interpolarPuntos(sinr, bler, 10);
+                std::vector<std::vector<double>> interpVals = interpolarPuntos(sinr, bler, num_values);
 
                 auto sinrvector = interpVals.front();
                 auto blervectro = interpVals.back();
