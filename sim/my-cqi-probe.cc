@@ -97,7 +97,8 @@ int main(int argc, char* argv[]) {
     uint8_t cqiHighGain = 2;         // Step of CQI probe
     Time ProbeCqiDuration = MilliSeconds(20);  // miliseconds
     Time stepFrequency = MilliSeconds(500); // miliseconds
-    // double cqiGainCycle[] = {5.0 / 4, 3.0 / 4 , 1, 1, 1, 1, 1, 1}; // Similar a BBR
+    double blerTarget = 0.1;
+    uint8_t AmcAlgorithm = (uint8_t)NrAmc::CqiAlgorithm::LENA_DEFAULT;
 
     // Trace activation
     bool NRTrace = true;    // whether to enable Trace NR
@@ -158,6 +159,8 @@ int main(int argc, char* argv[]) {
     cmd.AddValue("ProbeCqiDuration", "Duration of the Probe CQI override in s.", ProbeCqiDuration);
     cmd.AddValue("stepFrequency", "Time between activations of Probe CQI in s", stepFrequency);
     cmd.AddValue("addNoise", "Add normal distributed noise to the simulation", addNoise);
+    cmd.AddValue("blerTarget", "Set the bler target for the AMC (Default: 0.1)", blerTarget);
+    cmd.AddValue("amcAlgo", "Choose the algorithm to be used in the amc possible values -> 0:Original, 1:ProbeCqi, 2:NewBlerTarget", AmcAlgorithm);
 
     cmd.Parse(argc, argv);
 
@@ -188,9 +191,13 @@ int main(int argc, char* argv[]) {
     ********************************************************************************************************************/
     #pragma region sv_tcp_scenario
 
-    NrAmc::SetCqiModel(NrAmc::PROBE_CQI);
+    /* AMC Algorithm change */
+    NrAmc::SetCqiModel((NrAmc::CqiAlgorithm)AmcAlgorithm);
     NrAmc::Set(cqiHighGain, ProbeCqiDuration, stepFrequency); // To configure the ProbeCQI algorithm
+    NrAmc::SetBlerTarget(blerTarget);
 
+
+    /* Server type - Distance */
     if (serverType == "Remote")
     {
         serverDelay = 0.04; 
@@ -660,10 +667,12 @@ int main(int argc, char* argv[]) {
     inif << "rlcBufferPerc = " << rlcBufferPerc << std::endl;
     inif << "serverType = " << serverType << std::endl;
     inif << "dataRate = " << dataRate << std::endl;
+    inif << "AmcAlgorithm = " << AmcAlgorithm << std::endl;
     inif << "cqiHighGain = " << +cqiHighGain << std::endl;
     inif << "ProbeCqiDuration = " << ProbeCqiDuration.GetSeconds()*1000 << " ms" << std::endl;
     inif << "stepFrequency = " << stepFrequency.GetSeconds()*1000 << " ms" << std::endl;
     inif << "addNoise = " << addNoise << std::endl;
+    inif << "blerTarget = " << blerTarget << std::endl;
 
     inif << std::endl;
     inif << "[gNb]" << std::endl;
