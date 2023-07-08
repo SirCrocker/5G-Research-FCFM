@@ -225,7 +225,8 @@ NrAmc::CreateCqiFeedbackWbTdma(const SpectrumValue& sinr, uint8_t& mcs) const
             cqi = ProbeCqiAlgorithm(sinr, mcs);
             break;
         
-        case PROBE_BLER:
+        case NEW_BLER_TARGET:
+            cqi = NewBlerTargetAlgorithm(sinr, mcs);
             break;
 
         case LENA_DEFAULT:
@@ -242,7 +243,6 @@ uint8_t
 NrAmc::OriginalCqiAlgorithm(const SpectrumValue& sinr, uint8_t& mcs) const
 {
     uint8_t cqi = 0;
-    double seAvg = 0;
     Values::const_iterator it;
 
     std::vector<int> rbMap;
@@ -302,7 +302,6 @@ uint8_t
 NrAmc::ProbeCqiAlgorithm(const SpectrumValue& sinr, uint8_t& mcs) const
 {
     uint8_t cqi = 0;
-    double seAvg = 0;
     Values::const_iterator it;
 
     std::vector<int> rbMap;
@@ -391,10 +390,9 @@ NrAmc::ProbeCqiAlgorithm(const SpectrumValue& sinr, uint8_t& mcs) const
 }
 
 uint8_t
-NrAmc::ProbeBlerAlgorithm(const SpectrumValue& sinr, uint8_t& mcs) const
+NrAmc::NewBlerTargetAlgorithm(const SpectrumValue& sinr, uint8_t& mcs) const
 {
     uint8_t cqi = 0;
-    double seAvg = 0;
     Values::const_iterator it;
 
     std::vector<int> rbMap;
@@ -411,9 +409,6 @@ NrAmc::ProbeBlerAlgorithm(const SpectrumValue& sinr, uint8_t& mcs) const
     mcs = 0;
     Ptr<NrErrorModelOutput> output;
 
-    /* From here we can get the BLER */
-    std::pair<double, double> oldValue(0, 0);
-
     while (mcs <= m_errorModel->GetMaxMcs())
     {
         output = m_errorModel->GetTbDecodificationStats(sinr,
@@ -421,7 +416,7 @@ NrAmc::ProbeBlerAlgorithm(const SpectrumValue& sinr, uint8_t& mcs) const
                                                         CalculateTbSize(mcs, rbMap.size()),
                                                         mcs,
                                                         NrErrorModel::NrErrorModelHistory());
-        if (output->m_tbler > 0.1)
+        if (output->m_tbler > m_blerTarget)
         {
             break;
         }
@@ -454,11 +449,10 @@ NrAmc::ProbeBlerAlgorithm(const SpectrumValue& sinr, uint8_t& mcs) const
     return cqi;
 }
 
-double
-NrAmc::lerp(double x, std::pair<double, double> xy0, std::pair<double, double> xy1)
+void
+NrAmc::SetBlerTarget(double blerTarget)
 {
-    double y = xy0.second + (x - xy0.first) * (xy1.second - xy0.second) / (xy1.first - xy0.first);
-    return y;
+    m_blerTarget = blerTarget;
 }
 
 void

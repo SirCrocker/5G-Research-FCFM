@@ -187,16 +187,15 @@ class NrAmc : public Object
      */
     uint32_t GetPayloadSize(uint8_t mcs, uint32_t nprb) const;
 
-    /**
-     * Custom functions, they are used for ProbeCQI
-    */
-    static bool Set(const uint8_t cqiGain, Time stepDuration, Time stepFrequency);
-    static uint8_t MyCqi();
-    // Linear interpolation
-    static double lerp(double x, std::pair<double, double> xy0, std::pair<double, double> xy1);
+
     uint8_t ProbeCqiAlgorithm(const SpectrumValue& sinr, uint8_t& mcs) const;
     uint8_t OriginalCqiAlgorithm(const SpectrumValue& sinr, uint8_t& mcs) const;
-    uint8_t ProbeBlerAlgorithm(const SpectrumValue& sinr, uint8_t& mcs) const;
+
+    /**
+     * This algorithm follows the same procedure as the original algorithm to obtain
+     * the bler per sinr-mcs pair. The bler target must be set using an auxiliary function.
+    */
+    uint8_t NewBlerTargetAlgorithm(const SpectrumValue& sinr, uint8_t& mcs) const;
 
     enum State {
         IN_STEP,
@@ -206,12 +205,17 @@ class NrAmc : public Object
     enum CqiAlgorithm {
       LENA_DEFAULT,
       PROBE_CQI,
-      PROBE_BLER
+      NEW_BLER_TARGET
     };
 
+    /* Functions to change the CQI/BLER/MCS algorithm */
     static void SetCqiModel(NrAmc::CqiAlgorithm algorithm);
-
     inline static CqiAlgorithm m_cqiModel = LENA_DEFAULT;
+
+    /* Probe Cqi Algorithm auxiliary functions and variables */
+    static bool Set(const uint8_t cqiGain, Time stepDuration, Time stepFrequency);
+    static uint8_t MyCqi();
+
     inline static bool m_active = false;
     inline static State m_currentState = OUT_STEP;
     inline static uint8_t m_cqiGain = 0;
@@ -219,6 +223,10 @@ class NrAmc : public Object
     inline static Time m_stepFrequency = Seconds(0);
     inline static Time m_lastActivationTime = Seconds(0);
     inline static uint8_t m_setCqiVal = 0;
+
+    /* New Bler Target Algorithm auxiliary functions and variables */
+    inline static double m_blerTarget = 0.1;
+    static void SetBlerTarget(double blerTarget);
 
   private:
     /**
