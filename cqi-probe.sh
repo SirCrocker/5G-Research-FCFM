@@ -3,12 +3,14 @@
 # Color and paths vars are imported
 source "paths.cfg"
 
+# Get the system type
+system_type=$(uname)
+
 # Start time
 tic=$(date +%s)
 
 # Default values
 serverType='Edge'
-rlcBufferPer=100
 tcpTypeId='UDP'
 mobilityVal=0
 build_ns3=1
@@ -19,29 +21,27 @@ open_folder=0
 helpFunction()
 {
    echo ""
-   echo "Usage: $0 -t $tcpTypeId -s $serverType -r $rlcBufferPer -m $mobilityVal -b $build_ns3"
+   echo "Usage: $0 -t $tcpTypeId -s $serverType -m $mobilityVal -b -o -p \"--arg=val\""
    echo -e "\t-t 'TcpNewReno' or 'TcpBbr' or 'TcpCubic' or 'TcpHighSpeed' or 'TcpBic' or 'TcpLinuxReno' or 'UDP'"
    echo -e "\t-s 'Remote' or 'Edge'"
-   echo -e "\t-r RLC Buffer BDP Percentage 10 o 100"
    echo -e "\t-m Mobility 1 or 0"
-   echo -e "\t-b Select if ns3 builds or not, default 1"
-   echo -e "\t-p Pass through commands to the simulation, args must be inside quotes (\"{arg}\")"
+   echo -e "\t-b Skips the build step of ns3, it always build by default"
+   echo -e "\t-p Pass through commands to the simulation, args must be inside quotes \"--arg=value\""
    echo -e "\t-c Custom folder name for the simulation data"
    echo -e "\t-o Open folder with results at the end of simulation and processing"
    exit 1 # Exit script after printing help
 }
 
-while getopts "t:r:s:m:b:p:c:o:" opt
+while getopts "t:r:s:m:bp:c:o" opt
 do
    case "$opt" in
       t ) tcpTypeId="$OPTARG" ;;
       s ) serverType="$OPTARG" ;;
-      r ) rlcBufferPer="$OPTARG" ;;
       m ) mobilityVal="$OPTARG" ;;
-      b ) build_ns3="$OPTARG" ;;
+      b ) build_ns3=0 ;;
       p ) pass_through="$OPTARG" ;;
       c ) custom_name="$OPTARG" ;;
-      o ) open_folder="$OPTARG" ;;
+      o ) open_folder=1 ;;
       ? ) helpFunction ;; # Print helpFunction in case parameter is non-existent
    esac
 done
@@ -50,12 +50,6 @@ done
 if [ "$serverType" != "Remote" ] && [ "$serverType" != "Edge" ]
 then
    echo "ServerType \"$serverType\" not available";
-   helpFunction
-fi
-
-if [ "$rlcBufferPer" != "10" ] && [ "$rlcBufferPer" != "100" ]
-then
-   echo "rlcBuffer \"$rlcBufferPer\" not available";
    helpFunction
 fi
 
@@ -78,7 +72,7 @@ then
    echo "NS3 was built!"
 fi
 
-printf "\nRunning ${magenta}$0 -t ${tcpTypeId} -r ${rlcBufferPer} -s ${serverType}${clear}\n"
+printf "\nRunning ${magenta}$0 -t ${tcpTypeId} -s ${serverType}${clear}\n"
 
 if [ "$tcpTypeId" == "UDP" ]
 then
@@ -87,16 +81,10 @@ else
    flowType='TCP'
 fi
 servertag=${serverType:0:1}
-if [ "$rlcBufferPer" == "10" ]
-then
-    buffertag="0$rlcBufferPer"
-else
-    buffertag="$rlcBufferPer"
-fi
 
 
 echo
-printf "Running... \nRLCBuffer: ${green}${rlcBufferPer}${clear}\t tcpTypeId: ${magenta}${tcpTypeId}${clear}\tServer: ${green}${serverType}${clear}\n"
+printf "Running... \n tcpTypeId: ${magenta}${tcpTypeId}${clear}\tServer: ${green}${serverType}${clear}\tFolder: ${blue}${custom_name}${clear}\n"
 echo
 
 #backup run-sim and cc
@@ -105,10 +93,10 @@ outfolder="${RUTA_PROBE}/out"
 oldname_path=""
 if ([ "$custom_name" == "" ] || [[ $custom_name = *" "* ]])
 then
-   bkfolder=$tcpTypeId"-"$servertag"-"$buffertag"-"`date +%Y%m%d%H%M`
+   bkfolder=$tcpTypeId"-"$servertag"-"`date +%Y%m%d%H%M`
 else
    bkfolder=$custom_name
-   oldname_path=$outfolder/$bkfolder/$tcpTypeId"-"$servertag"-"$buffertag"-"`date +%Y%m%d%H%M`".oldname"
+   oldname_path=$outfolder/$bkfolder/$tcpTypeId"-"$servertag"-"`date +%Y%m%d%H%M`".oldname"
 fi
 
 me=`basename "$0"`
@@ -138,7 +126,6 @@ cp "${RUTA_PROBE}/graph.py" $outfolder/$bkfolder/graph.py.txt
     --flowType=`echo $flowType`
     --tcpTypeId=`echo $tcpTypeId`
     --serverType=`echo $serverType`
-    --rlcBufferPerc=`echo $rlcBufferPer`
     --mobility=`echo $mobilityVal`
    `echo $pass_through`
     " --cwd `echo $outfolder/$bkfolder` --no-build
@@ -161,5 +148,16 @@ printf "Simulation Processed in: "${magenta}$(($toc-$tic))${clear}" seconds\n"
 
 if [ "$open_folder" != "0" ]
 then
+
+   # Check if the system is macOS
+   if [[ "$system_type" == "Darwin" ]]; then
    open $outfolder/$bkfolder
+   # Check if the system is Linux
+   elif [[ "$system_type" == "Linux" ]]; then
+   explorer $outfolder/$bkfolder
+   # If neither macOS nor Linux
+   else
+   echo "Unable to open folder."
+   fi
+
 fi
