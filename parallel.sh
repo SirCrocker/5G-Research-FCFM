@@ -4,14 +4,19 @@
 # TODO: Implementar método para poder cancelar/matar a los subprocesos
 # TODO: Revisar (y actualizar de ser necesario) para que sea compatible con linux y macos
 # INFO: Ahora mismo solo corre numero_de_cores - 1 simulaciones
-#       HAY que buildear antes de llamar, ya que no buildea ns3.
 
 # Custom vars
 source "paths.cfg"
 os=$(uname)
 
 # Parallelize simulations
-parameters=("--amcAlgo=2 --blerTarget=0.2" "--amcAlgo=2 --blerTarget=1")
+parameters=("--amcAlgo=2 --blerTarget=0.1" 
+            "--amcAlgo=2 --blerTarget=0.2"
+            "--amcAlgo=2 --blerTarget=0.3"
+            "--amcAlgo=2 --blerTarget=0.4"
+            "--amcAlgo=2 --blerTarget=0.5"
+            "--amcAlgo=2 --blerTarget=0.6"
+            "--amcAlgo=2 --blerTarget=0.7")
 montecarlo=2
 # Num of cores will be the number of parallel simulations
 num_cores=$(nproc)
@@ -22,14 +27,16 @@ sim_num=1
 nparam=0
 custom_name=""
 random=0
+build_ns3=1
 
 helpFunction()
 {
    echo ""
-   echo "Usage: $0 -m $montecarlo -c $custom_name -r"
+   echo "Usage: $0 -m $montecarlo -c $custom_name -r -b"
    echo -e "\t-m Number of montecarlo iterations"
    echo -e "\t-c Custom folder name for the simulation data, the number of parameter will be prefixed"
    echo -e "\t-r Flag that sets that a random run is used so results are not deterministic"
+   echo -e "\t-b Skips the build step of ns3, it always build by default"
    exit 1 # Exit script after printing help
 }
 
@@ -39,9 +46,18 @@ do
       m ) montecarlo="$OPTARG" ;;
       c ) custom_name="$OPTARG" ;;
       r ) random=1 ;;
+      b ) build_ns3=0 ;;
       ? ) helpFunction ;; # Print helpFunction in case parameter is non-existent
    esac
 done
+
+# Build ns3 before simulating
+if [ "$build_ns3" == "1" ]
+then 
+   "${RUTA_NS3}/ns3" build
+   clear
+   echo "NS3 was built!"
+fi
 
 for param in "${parameters[@]}"; do
 
@@ -71,7 +87,7 @@ for param in "${parameters[@]}"; do
         fi
 
         stdoutTxt=$RUTA_PROBE/out/$outdir/outputs/sim${mont_num}.txt
-        bash "cqi-probe.sh" -b -c "$outdir/SIM${mont_num}" -p "`echo $param2`" > "$stdoutTxt" && printf "Done $sim_num ${red}-${clear} Exit Status $?"&
+        bash "cqi-probe.sh" -b -c "$outdir/SIM${mont_num}" -p "`echo $param2`" > "$stdoutTxt" && printf "Done $sim_num ${red}-${clear} Exit Status $?\n"&
         printf "[sim:${blue}${sim_num}${clear} pid:${cyan}$!${clear}] Called ${green}cqi-probe.sh -b -c \"SIM${mont_num}\" -p ${param2} ${clear}\n"
 
         if [ "$rem" == "$((num_cores-1))" ]; then
