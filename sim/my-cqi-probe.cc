@@ -633,7 +633,7 @@ int main(int argc, char* argv[]) {
         asciiTCP.open("tcp-all-ascii.txt");
         ascii_wrap = new OutputStreamWrapper("tcp-all-ascii.txt", std::ios::out);
         internet.EnableAsciiIpv4All(ascii_wrap);
-        p2ph.EnablePcapAll("mypcapfile", true);
+        // p2ph.EnablePcapAll("mypcapfile", true);
     }
 
 
