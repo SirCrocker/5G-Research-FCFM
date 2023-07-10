@@ -60,7 +60,7 @@ def info_n_time_decorator(name, debug=False):
         return wrapper
     return actual_decorator
 
-
+@info_n_time_decorator("UDP Loss")
 def checkUdpLoss(homepath: str, noisePresent):
     
     # In this test we only have 1 UE, with NodeId=1
