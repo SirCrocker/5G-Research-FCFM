@@ -68,6 +68,12 @@ fi
 if [ "$build_ns3" == "1" ]
 then 
    "${RUTA_NS3}/ns3" build
+   
+   if [ "$?" != "0" ]; then
+      printf "${red}Error while building, simulation cancelled! ${clear}\n"
+      exit 1
+   fi
+
    clear
    echo "NS3 was built!"
 fi
@@ -123,12 +129,19 @@ cp "${RUTA_PROBE}/packet-error-rate.sh" $outfolder/$bkfolder/packet-error-rate.s
 cp "${RUTA_PROBE}/graph.py" $outfolder/$bkfolder/graph.py.txt
 
 "${RUTA_NS3}/ns3" run "${FILENAME}
-    --flowType=`echo $flowType`
-    --tcpTypeId=`echo $tcpTypeId`
-    --serverType=`echo $serverType`
-    --mobility=`echo $mobilityVal`
-   `echo $pass_through`
-    " --cwd `echo $outfolder/$bkfolder` --no-build
+    --flowType=$flowType
+    --tcpTypeId=$tcpTypeId
+    --serverType=$serverType
+    --mobility=$mobilityVal
+   $pass_through
+    " --cwd "$outfolder/$bkfolder" --no-build
+
+   exit_status=$?
+   if [ "$exit_status" != "0" ]; then
+      printf "${red}Error ${exit_status} while simulating, simulation cancelled! ${clear}\n"
+      echo "Graphs and post-processing script were not run."
+      exit $exit_status
+   fi
 
 echo "Destination folder name: $bkfolder"
 

@@ -1,7 +1,6 @@
 #!/bin/bash
 
 # TODO: Actualmente paraleliza por tandas, hacer que pueda ir uno por uno (asignando una sim a 1 core)
-# TODO: Implementar método para poder cancelar/matar a los subprocesos
 # TODO: Revisar (y actualizar de ser necesario) para que sea compatible con linux y macos
 # INFO: Ahora mismo solo corre numero_de_cores - 1 simulaciones
 
@@ -55,6 +54,12 @@ done
 if [ "$build_ns3" == "1" ]
 then 
    "${RUTA_NS3}/ns3" build
+
+    if [ "$?" != "0" ]; then
+      printf "${red}Error while building, simulation cancelled! ${clear}\n"
+      exit 1
+    fi
+
    clear
    echo "NS3 was built!"
 fi
@@ -87,7 +92,7 @@ for param in "${parameters[@]}"; do
         fi
 
         stdoutTxt=$RUTA_PROBE/out/$outdir/outputs/sim${mont_num}.txt
-        bash "cqi-probe.sh" -b -c "$outdir/SIM${mont_num}" -p "`echo $param2`" > "$stdoutTxt" && printf "Done $sim_num ${red}-${clear} Exit Status $?\n"&
+        bash "cqi-probe.sh" -b -c "$outdir/SIM${mont_num}" -p "`echo $param2`" &> "$stdoutTxt"; printf "Done $sim_num ${red}-${clear} Exit Status $?\n"&
         printf "[sim:${blue}${sim_num}${clear} pid:${cyan}$!${clear}] Called ${green}cqi-probe.sh -b -c \"SIM${mont_num}\" -p ${param2} ${clear}\n"
 
         if [ "$rem" == "$((num_cores-1))" ]; then
