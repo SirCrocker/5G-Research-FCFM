@@ -3,10 +3,10 @@
 
 #pragma region
 std::string infostr = R"ASADO(// Copyright (c) 2022 Centre Tecnologic de Telecomunicacions de Catalunya (CTTC)
-// Interpolated by the ProbeBLER crew (asado?)
+// Interpolated by Espacio 5G (A.G. ; D.T.)
 // SPDX-License-Identifier: GPL-2.0-only
 
-#include "ns3/nr-eesm-t1.h"
+#include "nr-eesm-t1.h"
 
 namespace ns3
 {
@@ -179,17 +179,18 @@ std::vector<std::vector<double>> interpolarPuntos(const std::vector<double>& X, 
 
 int main()
 {
-    int num_values = 10;  // Total number of values will be num_values+2 because the first and last values are kept
+    int num_values = 100;  // Total number of values will be num_values+2 because the first and last values are kept
+    std::cout << "[!] Remember to set the cwd to the project folder." << std::endl;
+    std::cout << "Interpolating a total of " << num_values << " samples." << std::endl;
+
 
     NrEesmT1 table;
     auto* tt = table.m_simulatedBlerFromSINR;
-
-    auto a = std::get<1>(tt->at(1).at(6).at(704));
     
     int mcsIndex = 0;
     int BsgIndex = 0;
 
-    std::ofstream outfile("new_table.cc");  
+    std::ofstream outfile("./to_replace_in_src/nr-eesm-t1.cc.txt");  
     
     outfile << infostr << std::endl;
 
@@ -268,6 +269,7 @@ int main()
     }
     outfile << "};" << std::endl;
     outfile << endstring << std::endl;
+    outfile << "// Interpolated with n=" << num_values << " samples.";
 
     return 0;
 }
