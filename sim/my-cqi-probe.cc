@@ -667,7 +667,7 @@ int main(int argc, char* argv[]) {
     inif << "rlcBufferPerc = " << rlcBufferPerc << std::endl;
     inif << "serverType = " << serverType << std::endl;
     inif << "dataRate = " << dataRate << std::endl;
-    inif << "AmcAlgorithm = " << AmcAlgorithm << std::endl;
+    inif << "AmcAlgorithm = " << +AmcAlgorithm << std::endl;
     inif << "cqiHighGain = " << +cqiHighGain << std::endl;
     inif << "ProbeCqiDuration = " << ProbeCqiDuration.GetSeconds()*1000 << " ms" << std::endl;
     inif << "stepFrequency = " << stepFrequency.GetSeconds()*1000 << " ms" << std::endl;
