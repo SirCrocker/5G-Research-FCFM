@@ -19,6 +19,10 @@ BG_BLUE='\033[0;44m'
 BG_MAGENTA='\033[0;45m'
 BG_CYAN='\033[0;46m'
 
+# Error for the number of arguments
+class ArgumentError(BaseException):
+    pass
+
 # ----------------------------------------------------------
 # Decorator for time
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
@@ -60,6 +64,8 @@ def info_n_time_decorator(name, debug=False):
         return wrapper
     return actual_decorator
 
+# Prints the number of lost packets and if noise was present or not
+# in the simulation.
 @info_n_time_decorator("UDP Loss")
 def checkUdpLoss(homepath: str, noisePresent):
     
