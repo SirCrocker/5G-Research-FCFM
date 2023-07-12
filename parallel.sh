@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # TODO: Actualmente paraleliza por tandas, hacer que pueda ir uno por uno (asignando una sim a 1 core)
-# TODO: Revisar (y actualizar de ser necesario) para que sea compatible con linux y macos
+# TODO: Propagar Ctrl-c
 # INFO: Ahora mismo solo corre numero_de_cores - 1 simulaciones
 
 # Custom vars
@@ -39,7 +39,7 @@ helpFunction()
    exit 1 # Exit script after printing help
 }
 
-while getopts "m:c:r" opt
+while getopts "m:c:rb" opt
 do
    case "$opt" in
       m ) montecarlo="$OPTARG" ;;
@@ -92,7 +92,7 @@ for param in "${parameters[@]}"; do
         fi
 
         stdoutTxt=$RUTA_PROBE/out/$outdir/outputs/sim${mont_num}.txt
-        bash "cqi-probe.sh" -b -c "$outdir/SIM${mont_num}" -p "`echo $param2`" &> "$stdoutTxt"; printf "Done $sim_num ${red}-${clear} Exit Status $?\n"&
+        (bash "cqi-probe.sh" -b -c "$outdir/SIM${mont_num}" -p "$param2" &> $stdoutTxt; printf "Done $sim_num ${red}-${clear} Exit Status $?\n") &
         printf "[sim:${blue}${sim_num}${clear} pid:${cyan}$!${clear}] Called ${green}cqi-probe.sh -b -c \"SIM${mont_num}\" -p ${param2} ${clear}\n"
 
         if [ "$rem" == "$((num_cores-1))" ]; then
