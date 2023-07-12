@@ -1,5 +1,6 @@
 #include "ns3/nr-eesm-t1.h"
 #include <fstream>
+#include <iomanip>
 
 #pragma region
 std::string infostr = R"ASADO(// Copyright (c) 2022 Centre Tecnologic de Telecomunicacions de Catalunya (CTTC)
