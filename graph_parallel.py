@@ -90,7 +90,7 @@ def violinGraphDelay(data):
     plt.suptitle("Comparison of Delay in scenario 2")
     plt.title("Values of target BLER are changed.")
     plt.xlabel("Target BLER")
-    plt.ylabel("Delay [s]")
+    plt.ylabel("Delay [ms]")
     plt.xticks(np.arange(1, len(data["labels"])+1), labels=data["labels"])
     plt.savefig(os.path.join(PATH, "Delay-Violin-Par.png"), dpi=300)
     plt.close()
