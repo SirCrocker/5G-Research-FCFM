@@ -23,8 +23,9 @@
 #include <unistd.h>
 
 /* Include custom libraries (aux files for the simulation) */
-#include "cmdline-colors.h"
+// #include "cmdline-colors.h"
 #include "cqiprobe-apps.h"
+#include "physical-scenarios.h"
 
 using namespace ns3;
 
@@ -274,90 +275,7 @@ int main(int argc, char* argv[]) {
     gnbNodes.Create(gNbNum, GNB_SYS_ID);
     ueNodes.Create(gNbNum * ueNumPergNb, UE_SYS_ID);
 
-    // set mobile device and base station antenna heights in meters, according to the chosen scenario
-    if (scenario == "UMa") {
-        hBS = 25;
-        hUE = 1.5;
-
-    } else {
-        NS_ABORT_MSG("Scenario not supported. Only UMa is currently supported");
-    }
-
-    // Set position of the base stations
-    std::cout << cyan << "Positioning Nodes" << clear << std::endl;
-    Ptr<ListPositionAllocator> gnbPositionAlloc = CreateObject<ListPositionAllocator>();
-    for (uint32_t u = 0; u < gnbNodes.GetN(); ++u)
-    {
-        std::cout << "Node ID " << gnbNodes.Get (u)->GetId() << " Sys ID:" << gnbNodes.Get(u)->GetSystemId() + u << std::endl;
-        std::cout << "gNb: " << u << "\t" << "(" << gNbX << "," << gNbY+gNbD*u <<")" << std::endl;
-        gnbPositionAlloc->Add(Vector(gNbX, gNbY+gNbD*u, hBS));
-    }
-    MobilityHelper enbmobility;
-    enbmobility.SetMobilityModel("ns3::ConstantPositionMobilityModel");
-    enbmobility.SetPositionAllocator(gnbPositionAlloc);
-    enbmobility.Install(gnbNodes);
-
-    // position the mobile terminals and enable the mobility
-    MobilityHelper uemobility;
-    uemobility.SetMobilityModel("ns3::ConstantVelocityMobilityModel");
-    // uemobility.SetMobilityModel("ns3::RandomDirection2dMobilityModel","Bounds", RectangleValue(Rectangle(x_min, x_max, y_min, y_max)));
-    // uemobility.SetMobilityModel("ns3::WaypointMobilityModel");
-    uemobility.Install(ueNodes);
-
-    if (!mobility){
-        speed=0;
-    }
- 
-    // Set Initial Position of UE
-    for (uint32_t u = 0; u < ueNodes.GetN(); ++u)
-    {
-        std::cout << "UE: " << u << "\t" << "Pos: "<<"(" << xUE << "," << yUE +ueDistance*u <<")" << "\t" << "Speed: (" << speed << ", 0)" <<std::endl;
-        ueNodes.Get(u)->GetObject<MobilityModel>()->SetPosition(Vector((float)xUE, (float) yUE +(float)ueDistance*u, hUE)); // (x, y, z) in m
-        ueNodes.Get(u)->GetObject<ConstantVelocityMobilityModel>()->SetVelocity(Vector( speed, 0,  0)); // move UE1 along the x axis
-
-        // Waypoint model
-        // Ptr<WaypointMobilityModel> waypoints = ueNodes.Get(u)->GetObject<WaypointMobilityModel>();
-        // waypoints->AddWaypoint(Waypoint (Seconds(0.0), Vector(xUE, yUE, hUE))); // Posición inicial
-        // waypoints->AddWaypoint(Waypoint (Seconds(10.0), Vector(xUE-5, yUE-10, hUE)));
-        // waypoints->AddWaypoint(Waypoint (Seconds(20.0), Vector(xUE, yUE, hUE))); // Posición final
-    }
-    #pragma endregion UE_gNB
-
-    /********************************************************************************************************************
-     * Create and install buildings
-     ********************************************************************************************************************/
-    if (enableBuildings)
-    {
-        std::cout << cyan << "Installing Building" << clear << std::endl;
-
-        Ptr<GridBuildingAllocator> gridBuildingAllocator;
-        gridBuildingAllocator = CreateObject<GridBuildingAllocator>();
-        gridBuildingAllocator->SetAttribute("GridWidth", UintegerValue(gridWidth)); // The number of objects laid out on a line. 1 as a column of building
-        gridBuildingAllocator->SetAttribute("MinX", DoubleValue(buildX)); // The x coordinate where the grid starts.
-        gridBuildingAllocator->SetAttribute("MinY", DoubleValue(buildY)); // The y coordinate where the grid starts.
-        gridBuildingAllocator->SetAttribute("LengthX", DoubleValue(buildLx * apartmentsX)); // the length of the wall of each building along the X axis.
-        gridBuildingAllocator->SetAttribute("LengthY", DoubleValue(buildLy)); // the length of the wall of each building along the X axis.
-        gridBuildingAllocator->SetAttribute("DeltaX", DoubleValue(buildDx)); // The x space between buildings.
-        gridBuildingAllocator->SetAttribute("DeltaY", DoubleValue(buildDy)); // The y space between buildings.
-        gridBuildingAllocator->SetAttribute("Height", DoubleValue(3 * nFloors)); // The height of the building (roof level)
-        gridBuildingAllocator->SetAttribute("LayoutType", EnumValue (GridPositionAllocator::ROW_FIRST)); // The type of layout. ROW_FIRST COLUMN_FIRST
-
-        gridBuildingAllocator->SetBuildingAttribute("NRoomsX", UintegerValue(apartmentsX));
-        gridBuildingAllocator->SetBuildingAttribute("NRoomsY", UintegerValue(1));
-        gridBuildingAllocator->SetBuildingAttribute("NFloors", UintegerValue(nFloors));
-        gridBuildingAllocator->Create(numOfBuildings);
-
-        // position of the Buildings
-        Ptr<ListPositionAllocator> buildingPositionAlloc = CreateObject<ListPositionAllocator>();
-        buildingPositionAlloc->Add(Vector(buildX, buildY, 0.0));
-        MobilityHelper buildingmobility;
-        buildingmobility.SetMobilityModel("ns3::ConstantPositionMobilityModel");
-        buildingmobility.SetPositionAllocator(buildingPositionAlloc);
-
-        BuildingsHelper::Install(gnbNodes);
-        BuildingsHelper::Install(ueNodes);
-
-    }
+    DefaultPhysicalDistribution(gnbNodes, ueNodes, mobility);
 
     /********************************************************************************************************************
      * NR Helpers and Stuff
