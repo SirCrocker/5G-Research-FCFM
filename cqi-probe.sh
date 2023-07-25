@@ -21,23 +21,23 @@ open_folder=0
 helpFunction()
 {
    echo ""
-   echo "Usage: $0 -t $tcpTypeId -s $serverType -m $mobilityVal -b -o -p \"--arg=val\""
+   echo "Usage: $0 -t $tcpTypeId -s $serverType -m -b -o -p \"--arg=val\""
    echo -e "\t-t 'TcpNewReno' or 'TcpBbr' or 'TcpCubic' or 'TcpHighSpeed' or 'TcpBic' or 'TcpLinuxReno' or 'UDP'"
    echo -e "\t-s 'Remote' or 'Edge'"
-   echo -e "\t-m Mobility 1 or 0"
-   echo -e "\t-b Skips the build step of ns3, it always build by default"
+   echo -e "\t-m Activates mobility of the UE(s)"
+   echo -e "\t-b Skips the build step of ns3, it always builds by default"
    echo -e "\t-p Pass through commands to the simulation, args must be inside quotes \"--arg=value\""
    echo -e "\t-c Custom folder name for the simulation data"
    echo -e "\t-o Open folder with results at the end of simulation and processing"
    exit 1 # Exit script after printing help
 }
 
-while getopts "t:r:s:m:bp:c:o" opt
+while getopts "t:r:s:mbp:c:o" opt
 do
    case "$opt" in
       t ) tcpTypeId="$OPTARG" ;;
       s ) serverType="$OPTARG" ;;
-      m ) mobilityVal="$OPTARG" ;;
+      m ) mobilityVal=1 ;;
       b ) build_ns3=0 ;;
       p ) pass_through="$OPTARG" ;;
       c ) custom_name="$OPTARG" ;;
@@ -88,11 +88,6 @@ else
 fi
 servertag=${serverType:0:1}
 
-
-echo
-printf "Running... \n tcpTypeId: ${magenta}${tcpTypeId}${clear}\tServer: ${green}${serverType}${clear}\tFolder: ${blue}${custom_name}${clear}\n"
-echo
-
 #backup run-sim and cc
 outfolder="${RUTA_PROBE}/out"
 
@@ -120,13 +115,23 @@ then
    then
       touch $oldname_path
    fi
-
+else
+   printf "${blue}Directory already exists, using default name...${clear}\n"
+   bkfolder=$tcpTypeId"-"$servertag"-"`date +%Y%m%d%H%M`
+   mkdir $outfolder/$bkfolder
 fi
 
-cp $me $outfolder/$bkfolder/$me.txt
-cp $RUTA_CC $outfolder/$bkfolder/my-cqi-probe.cc.txt
-cp "${RUTA_PROBE}/packet-error-rate.sh" $outfolder/$bkfolder/packet-error-rate.sh.txt
-cp "${RUTA_PROBE}/graph.py" $outfolder/$bkfolder/graph.py.txt
+echo
+printf "Argument values... \n tcpTypeId: ${magenta}${tcpTypeId}${clear}\tServer: ${green}${serverType}${clear}\t Mobility: ${mobilityVal}\n"
+printf "Destination Folder: ${blue}${bkfolder}${clear}\n"
+echo
+
+backupfolder="scriptsBackup"
+mkdir $outfolder/$bkfolder/$backupfolder
+cp $me $outfolder/$bkfolder/$backupfolder/$me.txt
+cp $RUTA_CC $outfolder/$bkfolder/$backupfolder/my-cqi-probe.cc.txt
+cp "${RUTA_PROBE}/packet-error-rate.sh" $outfolder/$bkfolder/$backupfolder/packet-error-rate.sh.txt
+cp "${RUTA_PROBE}/graph.py" $outfolder/$bkfolder/$backupfolder/graph.py.txt
 
 "${RUTA_NS3}/ns3" run "${FILENAME}
     --flowType=$flowType
