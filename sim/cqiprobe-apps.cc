@@ -111,7 +111,7 @@ MyApp::SendPacket()
     }
     else
     {
-        std::cout  <<  red << "APP END" << clear << std::endl;
+        std::cout  <<  TXT_RED << "APP END" << TXT_CLEAR << std::endl;
 
     }
 }
@@ -127,7 +127,7 @@ MyApp::ScheduleTx()
     }
   else
     {
-      std::cout  <<  red << "APP STOPPED" << clear << std::endl;
+      std::cout  <<  TXT_RED << "APP STOPPED" << TXT_CLEAR << std::endl;
     }
 }
 
