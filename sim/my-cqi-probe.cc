@@ -23,7 +23,7 @@
 #include <unistd.h>
 
 /* Include custom libraries (aux files for the simulation) */
-// #include "cmdline-colors.h"
+#include "cmdline-colors.h"
 #include "cqiprobe-apps.h"
 #include "physical-scenarios.h"
 
@@ -74,16 +74,16 @@ int main(int argc, char* argv[]) {
     #pragma region Variables
 
     double frequency = 27.3e9;      // central frequency 28e9
-    double bandwidth = 100e6;       // bandwidth
+    double bandwidth = 400e6;       // bandwidth
     double mobility = true;         // whether to enable mobility default: false
-    double speed = 1;               // in m/s for walking UT.
+    // double speed = 1;               // in m/s for walking UT.
     bool logging = true;    // whether to enable logging from the simulation, another option is by
                             // exporting the NS_LOG environment variable
     bool shadowing = true;  // to enable shadowing effect
-    bool addNoise = true;  // To enable/disable AWGN
+    bool addNoise = false;  // To enable/disable AWGN
 
-    double hBS;          // base station antenna height in meters
-    double hUE;          // user antenna height in meters
+    // double hBS;          // base station antenna height in meters
+    // double hUE;          // user antenna height in meters
     double txPower = 40; // txPower
     uint16_t numerology = 3;        // 120 kHz and 125 microseg
     std::string scenario = "UMa";   // scenario
@@ -99,7 +99,8 @@ int main(int argc, char* argv[]) {
     Time ProbeCqiDuration = MilliSeconds(20);  // miliseconds
     Time stepFrequency = MilliSeconds(500); // miliseconds
     double blerTarget = 0.1;
-    uint8_t AmcAlgorithm = (uint8_t)NrAmc::CqiAlgorithm::LENA_DEFAULT;
+    int amcAlgorithm = (int)NrAmc::CqiAlgorithm::LENA_DEFAULT;
+    int phyDistro = (int)PhysicalDistributionOptions::TREES;
 
     // Trace activation
     bool NRTrace = true;    // whether to enable Trace NR
@@ -113,16 +114,16 @@ int main(int argc, char* argv[]) {
 
     // UE Info and position
     uint16_t ueNumPergNb = 1;   // Numbers of User per RB
-    double ueDistance = .50;    //Distance between UE
-    double xUE=30;  //Initial X Position UE
-    double yUE=10;  //Initial Y Position UE
+    // double ueDistance = .50;    //Distance between UE
+    // double xUE=30;  //Initial X Position UE
+    // double yUE=10;  //Initial Y Position UE
 
     // BUILDING Position
     bool enableBuildings = true; // 
     uint32_t gridWidth = 3 ;//
     uint32_t numOfBuildings = 2;
-    uint32_t apartmentsX = 1;
-    uint32_t nFloors = 10;
+    // uint32_t apartmentsX = 1;
+    // uint32_t nFloors = 10;
 
     double buildX=37.0; // Initial X Position
     double buildY=30.0; // Initial Y Position
@@ -161,7 +162,8 @@ int main(int argc, char* argv[]) {
     cmd.AddValue("stepFrequency", "Time between activations of Probe CQI in s", stepFrequency);
     cmd.AddValue("addNoise", "Add normal distributed noise to the simulation", addNoise);
     cmd.AddValue("blerTarget", "Set the bler target for the AMC (Default: 0.1)", blerTarget);
-    cmd.AddValue("amcAlgo", "Choose the algorithm to be used in the amc possible values -> 0:Original, 1:ProbeCqi, 2:NewBlerTarget", AmcAlgorithm);
+    cmd.AddValue("amcAlgo", "Choose the algorithm to be used in the amc possible values:\n\t0:Original\n\t1:ProbeCqi\n\t2:NewBlerTarget", amcAlgorithm);
+    cmd.AddValue("phyDistro", "Physical distribution of the Buildings-UEs-gNbs. Options:\n\t0:Default\n\t1:Trees\n\t2:Indoor Router ", phyDistro);
 
     cmd.Parse(argc, argv);
 
@@ -172,17 +174,18 @@ int main(int argc, char* argv[]) {
     ********************************************************************************************************************/
     #pragma region logs
     // Redirect logs to output file, clog -> LOG_FILENAME
-    std::ofstream of(LOG_FILENAME);
+    std::ofstream ofLog(LOG_FILENAME);
     auto clog_buff = std::clog.rdbuf();
-    std::clog.rdbuf(of.rdbuf());
+    std::clog.rdbuf(ofLog.rdbuf());
 
     // enable logging
     if (logging)
     {
         LogComponentEnableAll(LOG_PREFIX_TIME);
-        //LogComponentEnable("Packet", LOG_DEBUG);
-        // LogComponentEnable("NrSpectrumPhy", LOG_INFO);
-        // LogComponentEnable("NrUePhy", LOG_DEBUG);
+        // LogComponentEnable("NrAmc", LOG_ALL);
+        // LogComponentEnable("BuildingsChannelConditionModel", LOG_ALL);
+        // LogComponentEnable("NrBearerStatsConnector", LOG_ALL);
+        // LogComponentEnable("NrHelper", LOG_ALL);
     }
 
     #pragma endregion logs
@@ -193,7 +196,7 @@ int main(int argc, char* argv[]) {
     #pragma region sv_tcp_scenario
 
     /* AMC Algorithm change */
-    NrAmc::SetCqiModel((NrAmc::CqiAlgorithm)AmcAlgorithm);
+    NrAmc::SetCqiModel((NrAmc::CqiAlgorithm)amcAlgorithm);
     NrAmc::Set(cqiHighGain, ProbeCqiDuration, stepFrequency); // To configure the ProbeCQI algorithm
     NrAmc::SetBlerTarget(blerTarget);
 
@@ -275,7 +278,22 @@ int main(int argc, char* argv[]) {
     gnbNodes.Create(gNbNum, GNB_SYS_ID);
     ueNodes.Create(gNbNum * ueNumPergNb, UE_SYS_ID);
 
-    DefaultPhysicalDistribution(gnbNodes, ueNodes, mobility);
+    switch ((PhysicalDistributionOptions)phyDistro)
+    {
+    case PhysicalDistributionOptions::IND_ROUTER:
+        IndoorRouterPhysicalDistribution(gnbNodes, ueNodes);
+        break;
+
+    case PhysicalDistributionOptions::TREES:
+        TreePhysicalDistribution(gnbNodes, ueNodes, mobility);
+        break;
+
+    case PhysicalDistributionOptions::DEFAULT:
+    default:
+        DefaultPhysicalDistribution(gnbNodes, ueNodes, mobility);
+        break;
+    }
+
 
     /********************************************************************************************************************
      * NR Helpers and Stuff
@@ -341,13 +359,11 @@ int main(int argc, char* argv[]) {
     
     std::string errorModel = "ns3::NrEesmIrT1"; //ns3::NrEesmCcT1, ns3::NrEesmCcT2, ns3::NrEesmIrT1, ns3::NrEesmIrT2, ns3::NrLteMiErrorModel
     
-    // Config::SetDefault("ns3::NrAmc::ErrorModelType", TypeIdValue(TypeId::LookupByName(errorModel)));
-    // Config::SetDefault("ns3::NrAmc::AmcModel", EnumValue(NrAmc::ErrorModel)); // NrAmc::ShannonModel // NrAmc::ErrorModel
     //we need activate? : "ns3::BuildingsChannelConditionModel"
     nrHelper->SetUlErrorModel(errorModel);
     nrHelper->SetDlErrorModel(errorModel);
 
-    std::string pathlossModel="ns3::ThreeGppUmaPropagationLossModel";
+    // std::string pathlossModel="ns3::ThreeGppUmaPropagationLossModel";
 
     nrHelper->SetChannelConditionModelAttribute("UpdatePeriod", TimeValue(MilliSeconds(0)));
     nrHelper->SetPathlossAttribute("ShadowingEnabled", BooleanValue(shadowing)); // false: allow see effect of path loss only
@@ -508,7 +524,7 @@ int main(int argc, char* argv[]) {
     else if ( flowType == "TCP")
     {
 
-        std::cout << cyan << "Install App: " << flowType << " " << tcpTypeId << clear << std::endl;
+        std::cout << TXT_CYAN << "Install App: " << flowType << " " << tcpTypeId << TXT_CLEAR << std::endl;
         uint16_t sinkPort = 8080;
 
         for (uint32_t u = 0; u < ueNodes.GetN(); ++u)
@@ -520,9 +536,9 @@ int main(int argc, char* argv[]) {
             // InstallTCP (remoteHostContainer.Get (0), ueNodes.Get (u), sinkPort++, start, end);
             InstallTCP2 (remoteHostContainer.Get (0), ueNodes.Get (u), sinkPort++, start, end, dataRate);
 
-            std::cout << cyan << 
+            std::cout << TXT_CYAN << 
                     "Install TCP between nodes: " << std::to_string(remoteHostContainer.Get (0)->GetId()) << "<->"<< std::to_string(ueNodes.Get (u)->GetId()) <<
-                    clear << std::endl;
+                    TXT_CLEAR << std::endl;
 
             // Hook TRACE SOURCE after application starts
             // this work because u is identical to socketid i this case
@@ -585,7 +601,7 @@ int main(int argc, char* argv[]) {
     inif << "rlcBufferPerc = " << rlcBufferPerc << std::endl;
     inif << "serverType = " << serverType << std::endl;
     inif << "dataRate = " << dataRate << std::endl;
-    inif << "AmcAlgorithm = " << +AmcAlgorithm << std::endl;
+    inif << "amcAlgorithm = " << +amcAlgorithm << std::endl;
     inif << "cqiHighGain = " << +cqiHighGain << std::endl;
     inif << "ProbeCqiDuration = " << ProbeCqiDuration.GetSeconds()*1000 << " ms" << std::endl;
     inif << "stepFrequency = " << stepFrequency.GetSeconds()*1000 << " ms" << std::endl;
@@ -865,8 +881,8 @@ SsThreshTracer(Ptr<OutputStreamWrapper> stream, uint32_t oldval, uint32_t newval
 static void
 TraceTcp(uint32_t nodeId, uint32_t socketId)
 {
-    std::cout << "\r\e[K" << cyan << "Trace TCP: " << nodeId << "<->" << socketId << " at: "<<  
-            1.e-9*std::chrono::duration_cast<std::chrono::nanoseconds>(tic-itime).count()<< clear << std::endl;
+    std::cout << "\r\e[K" << TXT_CYAN << "Trace TCP: " << nodeId << "<->" << socketId << " at: "<<  
+            1.e-9*std::chrono::duration_cast<std::chrono::nanoseconds>(tic-itime).count()<< TXT_CLEAR << std::endl;
 
 
     // Init Congestion Window Tracer
@@ -987,7 +1003,7 @@ CalculatePosition(NodeContainer* ueNodes, NodeContainer* gnbNodes, std::ostream*
     pid_t pid = getpid();
     auto elapsed_time = 1.e-9*std::chrono::duration_cast<std::chrono::nanoseconds>(toc-itime).count();
 
-    std::cout << "\r\e[K" << "pid: " << green << pid << clear << 
+    std::cout << "\r\e[K" << "pid: " << TXT_GREEN << pid << TXT_CLEAR << 
             " ST: " << "\033[1;32m["  << now.GetSeconds() << "/"<< simTime <<"] "<< "\033[0m"<<  
             " PT: " << 1.e-9*std::chrono::duration_cast<std::chrono::nanoseconds>(toc-tic).count()<< " "
             " ET: " << "\033[1;35m"  << elapsed_time << "\033[0m"<< " " <<
