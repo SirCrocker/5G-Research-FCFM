@@ -116,7 +116,7 @@ then
       touch $oldname_path
    fi
 else
-   printf "${blue}Directory already exists, using default name...${clear}\n"
+   printf "${magenta}Directory already exists, using default name...${clear}\n"
    bkfolder=$tcpTypeId"-"$servertag"-"`date +%Y%m%d%H%M`
    mkdir $outfolder/$bkfolder
 fi
@@ -144,11 +144,9 @@ cp "${RUTA_PROBE}/graph.py" $outfolder/$bkfolder/$backupfolder/graph.py.txt
    exit_status=$?
    if [ "$exit_status" != "0" ]; then
       printf "${red}Error ${exit_status} while simulating, simulation cancelled! ${clear}\n"
-      echo "Graphs and post-processing script were not run."
+      echo "Graphs and post-processing scripts were not run."
       exit $exit_status
    fi
-
-echo "Destination folder name: $bkfolder"
 
 echo
 printf "Running... Packet Error Rate Script\n"
