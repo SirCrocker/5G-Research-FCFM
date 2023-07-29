@@ -227,6 +227,23 @@ class NrAmc : public Object
     /* New Bler Target Algorithm auxiliary functions and variables */
     inline static double m_blerTarget = 0.1;
     static void SetBlerTarget(double blerTarget);
+    
+
+        /**
+     * \brief compute the effective SINR for the specified MCS and SINR, according
+     * to the EESM method.
+     * \param sinr the perceived sinrs in the whole bandwidth (vector, per RB)
+     * \param map the actives RBs for the TB
+     * \param mcs the MCS of the TB
+     * \param a the sum term to the exponential SINR
+     * \param b the denominator for the exponentials sum
+     * \return the effective SINR
+     */
+    double Get_SinrEff(const SpectrumValue& sinr,
+                   const std::vector<int>& map,
+                   uint8_t mcs,
+                   double a,
+                   double b) const;
 
   private:
     /**

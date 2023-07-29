@@ -9,6 +9,7 @@
 #include "lena-error-model.h"
 #include "nr-error-model.h"
 #include "nr-lte-mi-error-model.h"
+#include "nr-eesm-t1.h"
 
 #include <ns3/double.h>
 #include <ns3/enum.h>
@@ -120,8 +121,6 @@ uint32_t
 NrAmc::CalculateTbSize(uint8_t mcs, uint32_t nprb) const
 {
     NS_LOG_FUNCTION(this << static_cast<uint32_t>(mcs));
-    NS_LOG_DEBUG("Estoy llamando a la funcion Calculate TbSize en el tiempo: " << Simulator::Now().GetSeconds());
-
     NS_ASSERT_MSG(mcs <= m_errorModel->GetMaxMcs(),
                   "MCS=" << static_cast<uint32_t>(mcs) << " while maximum MCS is "
                          << static_cast<uint32_t>(m_errorModel->GetMaxMcs()));
@@ -235,7 +234,6 @@ NrAmc::CreateCqiFeedbackWbTdma(const SpectrumValue& sinr, uint8_t& mcs) const
             break;
         }
     }
-    NS_LOG_DEBUG("Voy a devolver este CQI: " << +cqi << " en este tiempo: " << Simulator::Now().GetSeconds());
     return cqi;
 }
 
@@ -294,7 +292,7 @@ NrAmc::OriginalCqiAlgorithm(const SpectrumValue& sinr, uint8_t& mcs) const
             ++cqi;
         }
     }
-    NS_LOG_DEBUG(this << "\t MCS " << (uint16_t)mcs << "-> CQI " << cqi);
+    NS_LOG_DEBUG(this << "\t MCS " << (uint16_t)mcs << "-> CQI " << +cqi);
     return cqi;
 }
 
@@ -415,8 +413,14 @@ NrAmc::NewBlerTargetAlgorithm(const SpectrumValue& sinr, uint8_t& mcs) const
                                                         rbMap,
                                                         CalculateTbSize(mcs, rbMap.size()),
                                                         mcs,
+
                                                         NrErrorModel::NrErrorModelHistory());
-        if (output->m_tbler > m_blerTarget)
+        double sinr_eff = Get_SinrEff(sinr, rbMap, mcs, 0, rbMap.size());
+        double sinr_eff_db = 10 * log10(sinr_eff);
+        double exp_blerTarget = 0.3*exp(-0.08*sinr_eff_db);
+        NS_LOG_DEBUG("Para el SINReff " << sinr_eff_db << " [dB], se tiene exp_blerTarget = " << exp_blerTarget);
+
+        if (output->m_tbler > exp_blerTarget)
         {
             break;
         }
@@ -445,7 +449,7 @@ NrAmc::NewBlerTargetAlgorithm(const SpectrumValue& sinr, uint8_t& mcs) const
             ++cqi;
         }
     }
-    NS_LOG_DEBUG(this << "\t MCS " << (uint16_t)mcs << "-> CQI " << cqi);
+    NS_LOG_DEBUG(this << "\t MCS " << (uint16_t)mcs << "-> CQI " << +cqi);
     return cqi;
 }
 
@@ -616,6 +620,34 @@ NrAmc::GetBer() const
     {
         return 0.00001; // Value for NR error model
     }
+}
+
+double
+NrAmc::Get_SinrEff(const SpectrumValue& sinr,
+                          const std::vector<int>& map,
+                          uint8_t mcs,
+                          double a,
+                          double b) const
+{
+    NS_LOG_FUNCTION(sinr << &map << (uint8_t)mcs);
+    NS_ABORT_MSG_IF(map.size() == 0,
+                    " Error: number of allocated RBs cannot be 0 - EESM method - SinrEff function");
+
+    double SINRexp = 0.0;
+    double sinrExpSum = 0.0;
+    NrEesmT1 table;
+    double beta = table.m_betaTable->at(mcs);
+    for (uint32_t i = 0; i < map.size(); i++)
+    {
+        double sinrLin = sinr[map.at(i)];
+        SINRexp = exp(-sinrLin / beta);
+        sinrExpSum += SINRexp;
+    }
+    double eff_SINR = -beta * log((a + sinrExpSum) / b);
+
+    NS_LOG_INFO("Effective SINR = " << eff_SINR);
+
+    return eff_SINR;
 }
 
 } // namespace ns3
