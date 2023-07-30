@@ -1,7 +1,7 @@
  /* -*-  Mode: C++; c-file-style: "gnu"; indent-tabs-mode:nil; -*- */
 
 // Copyright (c) 2019 Centre Tecnologic de Telecomunicacions de Catalunya (CTTC)
-//
+// Modified by A. Gonzalez and D. Torreblanca (2023)
 // SPDX-License-Identifier: GPL-2.0-only
 
 #ifndef NR_AMC_H
@@ -190,6 +190,7 @@ class NrAmc : public Object
 
     uint8_t ProbeCqiAlgorithm(const SpectrumValue& sinr, uint8_t& mcs) const;
     uint8_t OriginalCqiAlgorithm(const SpectrumValue& sinr, uint8_t& mcs) const;
+    uint8_t ExpBlerCqiAlgorithm(const SpectrumValue& sinr, uint8_t& mcs) const;
 
     /**
      * This algorithm follows the same procedure as the original algorithm to obtain
@@ -205,7 +206,8 @@ class NrAmc : public Object
     enum CqiAlgorithm {
       LENA_DEFAULT,
       PROBE_CQI,
-      NEW_BLER_TARGET
+      NEW_BLER_TARGET,
+      EXP_BLER_TARGET
     };
 
     /* Functions to change the CQI/BLER/MCS algorithm */
@@ -227,9 +229,9 @@ class NrAmc : public Object
     /* New Bler Target Algorithm auxiliary functions and variables */
     inline static double m_blerTarget = 0.1;
     static void SetBlerTarget(double blerTarget);
-    
 
-        /**
+
+    /**
      * \brief compute the effective SINR for the specified MCS and SINR, according
      * to the EESM method.
      * \param sinr the perceived sinrs in the whole bandwidth (vector, per RB)
