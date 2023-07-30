@@ -162,8 +162,8 @@ int main(int argc, char* argv[]) {
     cmd.AddValue("stepFrequency", "Time between activations of Probe CQI in s", stepFrequency);
     cmd.AddValue("addNoise", "Add normal distributed noise to the simulation", addNoise);
     cmd.AddValue("blerTarget", "Set the bler target for the AMC (Default: 0.1)", blerTarget);
-    cmd.AddValue("amcAlgo", "Choose the algorithm to be used in the amc possible values:\n\t0:Original\n\t1:ProbeCqi\n\t2:NewBlerTarget", amcAlgorithm);
-    cmd.AddValue("phyDistro", "Physical distribution of the Buildings-UEs-gNbs. Options:\n\t0:Default\n\t1:Trees\n\t2:Indoor Router ", phyDistro);
+    cmd.AddValue("amcAlgo", "Choose the algorithm to be used in the amc possible values:\n\t0:Original\n\t1:ProbeCqi\n\t2:NewBlerTarget\n\t3:ExpBlerTarget", amcAlgorithm);
+    cmd.AddValue("phyDistro", "Physical distribution of the Buildings-UEs-gNbs. Options:\n\t0:Default\n\t1:Trees\n\t2:Indoor Router", phyDistro);   
 
     cmd.Parse(argc, argv);
 
