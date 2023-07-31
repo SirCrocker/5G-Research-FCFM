@@ -2,7 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.cbook import get_sample_data
 from matplotlib.offsetbox import AnnotationBbox,OffsetImage
-import matplotlib.patches as mpatches
+from matplotlib.patches import Rectangle as pltRectangle
 import pandas as pd
 import sys
 import configparser
@@ -10,6 +10,7 @@ import os
 import logging
 logging.getLogger("scapy.runtime").setLevel(logging.ERROR)
 from scapy.all import rdpcap, TCP
+import json
 
 from OtherScripts.simutil import *
 
@@ -48,7 +49,7 @@ else:
     dataRate = 1000
 thr_limit = dataRate*1.1
 
-gNbNum = int(config['gNb']['gNbNum'])
+""" gNbNum = int(config['gNb']['gNbNum'])
 gNbX = float(config['gNb']['gNbX'])
 gNbY = float(config['gNb']['gNbY'])
 gNbD = float(config['gNb']['gNbD'])
@@ -61,7 +62,7 @@ buildY = float(config['building']['buildY'])
 buildDx = float(config['building']['buildDx'])
 buildDy = float(config['building']['buildDy'])
 buildLx = float(config['building']['buildLx'])
-buildLy = float(config['building']['buildLy'])
+buildLy = float(config['building']['buildLy']) """
 
 SUBTITLE = str(rlcBufferPerc) + '% BDP - Server: ' + serverType
 
@@ -105,42 +106,72 @@ plt.rc('lines', linewidth=2)
 # ----------------------------------------------------------
 # Mobility
 # ----------------------------------------------------------
-@info_n_time_decorator("Mobility")
+@info_n_time_decorator("Physical Distros", True)
 def graphMobility():
     fig, ax = plt.subplots()
-    file="mobilityPosition.txt"
-    title="Mobility"
+    mobFilepath="mobilityPosition.txt"
+    phydistroFilepath = "PhysicalDistribution.json"
+    title = "Physical Distribution of the objects"
 
-    mob = pd.read_csv(HOMEPATH + file, sep = "\t")
+    # UE / gNb images
+    gNbicon=plt.imread(get_sample_data(f'{MAINPROBE}/images/gNb.png'))
+    gnbBox = OffsetImage(gNbicon, zoom = 0.25)
+
+    UEicon=plt.imread(get_sample_data(f'{MAINPROBE}/images/UE.png'))
+    UEbox = OffsetImage(UEicon, zoom = 0.01)
+
+    # Read buildings and gNbs positions
+    phyData = json.load(open(HOMEPATH + phydistroFilepath))
+    buildingList = phyData["Buildings"]
+    gnbList = phyData["gnb"]
+
+    mob = pd.read_csv(HOMEPATH + mobFilepath, sep = "\t")
     mob.set_index('Time', inplace=True)
-    ax1= mob.plot.scatter( x='x',y='y', ax=ax,title=title)
-    gNbicon=plt.imread(get_sample_data(f'{MAINPROBE}/gNb.png'))
-    gNbbox = OffsetImage(gNbicon, zoom = 0.25)
-    for g in range(gNbNum):
-        gNbPos=[gNbX,(gNbY+5+g*gNbD)]
-        gNbab=AnnotationBbox(gNbbox,gNbPos, frameon = False)
-        ax.add_artist(gNbab)
-    if (enableBuildings):
-        for b in range(buildN):
-            row, col = divmod(b,gridWidth)
-            rect=mpatches.Rectangle((buildX+(buildLx+buildDx)*col,buildY+(buildLy+buildDy)*row),buildLx,buildLy, alpha=0.5, facecolor="red")
-            plt.gca().add_patch(rect)
+    ax1 = mob.plot.scatter( x='x',y='y', ax=ax, title=title, s=5, zorder=5, color="firebrick")
+    
+    for gnb in gnbList:
+        gnbAnnBox = AnnotationBbox(gnbBox, [gnb["x"], gnb["y"] + 5], frameon=False)
+        ax.add_artist(gnbAnnBox)
+    
+    for bld in buildingList:
+        
+        # TODO: change the creation of the json files that there is a tree type and
+        #       a building type, the idea is that the image is automatically chosen
+        #       depending on the type. Maybe Inherit building class and create new models?
 
-    UEicon=plt.imread(get_sample_data(f'{MAINPROBE}/UE.png'))
-    UEbox = OffsetImage(UEicon, zoom = 0.02)
+        if phyData["istree"]:
+            bldIcon = plt.imread(get_sample_data(f'{MAINPROBE}/images/tree.png'))
+            bldBox = OffsetImage(bldIcon, zoom=0.03)
+            bldAnnBox = AnnotationBbox(bldBox, [bld["xmin"], bld["ymin"]+5], frameon=False)
+            ax.add_artist(bldAnnBox)
+        
+        else:
+            
+            if bld["nroomsX"] > 0:
+                sep = bld["xwidth"] / bld["nroomsX"]
+                for xnum in range(bld["nroomsX"] + 1):
+                    plt.vlines(x=bld["xmin"]+ xnum*sep, ymin=bld["ymin"], ymax=bld["ymax"], colors="black")
+            
+            if bld["nroomsY"] > 0:
+                sep = bld["ywidth"] / bld["nroomsY"]
+                for xnum in range(bld["nroomsY"] + 1):
+                    plt.hlines(y=bld["ymin"]+ xnum*sep, xmin=bld["xmin"], xmax=bld["xmax"], colors="black")
+
+            bldRect = pltRectangle([bld["xmin"], bld["ymin"]], bld["xwidth"], bld["ywidth"], alpha=0.9, facecolor="lightsteelblue")
+            plt.gca().add_patch(bldRect)    
 
     for ue in mob['UE'].unique():
         UEPos=mob[mob['UE']==ue][['x','y']].iloc[-1:].values[0]+2
-        UEab=AnnotationBbox(UEbox,UEPos, frameon = False)
+        UEab=AnnotationBbox(UEbox,UEPos, frameon = False, zorder=5)
         ax.add_artist(UEab)
 
-    plt.xlim([min(0, mob['x'].min()) , max(100,mob['x'].max()+10)])
-    plt.ylim([min(0, mob['y'].min()) , max(100,mob['y'].max()+10)])
+    plt.xlim([min(0, mob['x'].min()) , max(60,mob['x'].max()+10)])
+    plt.ylim([min(0, mob['y'].min()) , max(60,mob['y'].max()+10)])
     ax.set_xlabel("Distance [m]")
     ax.set_ylabel("Distance [m]")
 
 
-    fig.savefig(HOMEPATH + SIM_PREFIX + title +'.png', dpi=300)
+    fig.savefig(HOMEPATH + SIM_PREFIX + title +'PhyDistro.png', dpi=300)
     plt.close()
 
     return True

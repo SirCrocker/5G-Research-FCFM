@@ -19,7 +19,7 @@ using namespace ns3;
      * @brief Function to print a distribution information as a JSON file so we can graph the
      * scenario later, it should be function agnostic
     */
-    void PrintPhysicalDistributionToJson();
+    void PrintPhysicalDistributionToJson(NodeContainer& gnbNodes, std::string extraData="\"istree\" : 0" );
 
     /**
      * The DEFAULT scenario, it is 2 buildings with one or more UEs that move in the same path

@@ -17,21 +17,14 @@ NS_LOG_COMPONENT_DEFINE("PhysicalDistro");
 // Currently creates a gnuplot file, to be updated later into a json file that will be 
 // parseable by matplotlib. 
 void 
-PrintPhysicalDistributionToJson()
+PrintPhysicalDistributionToJson(NodeContainer& gnbNodes, std::string extraData)
 {
-    std::string predata = R"RAW(scale = 2600/640
-set terminal pngcairo size 640*scale,480*scale fontscale scale linewidth scale pointscale scale
-set title "Placement of Buildings, only illustrative"
-set output "./phy-distro.png"
-set xrange [0:100]
-set yrange [0:100])RAW";
+    std::string predata = "{\n\"Buildings\" : [";
 
-    std::string postdata = "set nokey\nplot NaN";
-
-    std::ofstream outFile("PhysicalDistribution.gnuplot");
+    std::ofstream outFile("PhysicalDistribution.json");
     if (!outFile.is_open())
     {
-        NS_LOG_ERROR("Can't open file " << "PhysicalDistribution.gnuplot");
+        NS_LOG_ERROR("Can't open file " << "PhysicalDistribution.json");
         return;
     }
     outFile << predata << std::endl;
@@ -39,11 +32,59 @@ set yrange [0:100])RAW";
     for (BuildingList::Iterator it = BuildingList::Begin(); it != BuildingList::End(); ++it)
     {
         ++index;
-        Box box = (*it)->GetBoundaries();
-        outFile << "set object " << index << " rect from " << box.xMin << "," << box.yMin << " to "
-                << box.xMax << "," << box.yMax << std::endl;
+        Ptr<Building> blding = *it;
+        Box box = blding->GetBoundaries();
+        outFile << "\t{\n\t\t\"id\" : " << index << ", " << std::endl;
+        outFile << "\t\t\"xmin\" : " << box.xMin << "," << std::endl;
+        outFile << "\t\t\"xmax\" : " << box.xMax << "," << std::endl;
+        outFile << "\t\t\"xwidth\" : " << box.xMax - box.xMin << "," << std::endl;
+        outFile << "\t\t\"ymin\" : " << box.yMin << "," << std::endl;
+        outFile << "\t\t\"ymax\" : " << box.yMax << "," << std::endl;
+        outFile << "\t\t\"ywidth\" : " << box.yMax - box.yMin << "," << std::endl;
+        outFile << "\t\t\"zmin\" : " << box.zMin << "," << std::endl;
+        outFile << "\t\t\"zmax\" : " << box.zMax << "," << std::endl;
+        outFile << "\t\t\"zwidth\" : " << box.zMax - box.zMin << "," << std::endl;
+        outFile << "\t\t\"nroomsX\" : " << blding->GetNRoomsX() << "," << std::endl;
+        outFile << "\t\t\"nroomsY\" : " << blding->GetNRoomsY() << "," << std::endl;
+        outFile << "\t\t\"nfloors\" : " << blding->GetNFloors() << "\n\t}";
+        
+        if (index == BuildingList::GetNBuildings())
+        {
+            outFile << std::endl;
+        }
+        else
+        {
+            outFile << "," << std::endl;
+        }
+
     }
-    outFile << postdata << std::endl;
+
+    // Close building dict
+    outFile << "]," << std::endl;
+
+    // Start gnb dict
+    outFile << "\"gnb\" : [ " << std::endl;
+    for (NodeContainer::Iterator ptrNode = gnbNodes.Begin(); ptrNode != gnbNodes.End(); ++ptrNode)
+    {
+        Ptr<Node> node = *ptrNode;
+        Vector pos = node->GetObject<MobilityModel>()->GetPosition();
+        outFile << "\t{\n\t\t\"id\" : " << node->GetId() << ", " << std::endl;
+        outFile << "\t\t\"x\" : " << pos.x << "," << std::endl;
+        outFile << "\t\t\"y\" : " << pos.y << "," << std::endl;
+        outFile << "\t\t\"z\" : " << pos.z << "\n\t}";
+
+        if (ptrNode == --gnbNodes.End())
+        {
+            outFile << std::endl;
+        }
+        else
+        {
+            outFile << "," << std::endl;
+        }
+
+    }
+
+    outFile << "],\n" << extraData << "\n}" << std::endl;
     outFile.close();
 }
 
@@ -67,14 +108,14 @@ DefaultPhysicalDistribution(ns3::NodeContainer& gnbNodes, ns3::NodeContainer& ue
 
     // RB Info and position
     // uint16_t gNbNum = 1;    // Numbers of RB
-    double gNbX = 50.0;     // X position
+    double gNbX = 30.0;     // X position
     double gNbY = 50.0;     // Y position
     uint16_t gNbD = 80;     // Distance between gNb
 
     // UE Info and position
     // uint16_t ueNumPergNb = 1;   // Numbers of User per RB
     double ueDistance = .50;    //Distance between UE
-    double xUE=30;  //Initial X Position UE
+    double xUE=10;  //Initial X Position UE
     double yUE=10;  //Initial Y Position UE
 
     // BUILDING Position
@@ -84,7 +125,7 @@ DefaultPhysicalDistribution(ns3::NodeContainer& gnbNodes, ns3::NodeContainer& ue
     uint32_t apartmentsX = 1;
     uint32_t nFloors = 10;
 
-    double buildX=37.0; // Initial X Position
+    double buildX=17.0; // Initial X Position
     double buildY=30.0; // Initial Y Position
     double buildDx=10;  // Distance X between buildings
     double buildDy=10;  // Distance Y between buildings
@@ -164,11 +205,11 @@ DefaultPhysicalDistribution(ns3::NodeContainer& gnbNodes, ns3::NodeContainer& ue
         BuildingsHelper::Install(gnbNodes);
         BuildingsHelper::Install(ueNodes);
 
-        std::cout << "Installed default distribution" << std::endl;
+        std::cout << TXT_CYAN << "Installed default distribution" << TXT_CLEAR << std::endl;
 
     }
 
-    PrintPhysicalDistributionToJson();
+    PrintPhysicalDistributionToJson(gnbNodes);
 }
 
 void 
@@ -191,26 +232,26 @@ TreePhysicalDistribution(ns3::NodeContainer& gnbNodes, ns3::NodeContainer& ueNod
 
     // RB Info and position
     // uint16_t gNbNum = 1;    // Numbers of RB
-    double gNbX = 50.0;     // X position
-    double gNbY = 50.0;     // Y position
+    double gNbX = 30.0;     // X position
+    double gNbY = 30.0;     // Y position
     uint16_t gNbD = 80;     // Distance between gNb
 
     // UE Info and position
     // uint16_t ueNumPergNb = 1;   // Numbers of User per RB
     double ueDistance = .50;    //Distance between UE
-    double xUE=20;  //Initial X Position UE
-    double yUE=26;  //Initial Y Position UE
+    double xUE=15;  //Initial X Position UE
+    double yUE=6;  //Initial Y Position UE
 
     // BUILDING Position
     bool enableBuildings = true; // 
-    uint32_t gridWidth = 7 ; // "The number of objects laid out on a line."
-    uint32_t numOfTrees = 7; 
+    uint32_t numOfTrees = 9;
+    uint32_t gridWidth = numOfTrees ; // "The number of objects laid out on a line."
     uint32_t nApartments = 0;
     uint32_t nFloors = 1;
     double height = 7; // Height of the trees in meters
 
-    double buildX=37.0; // Initial X Position
-    double buildY=30.0; // Initial Y Position
+    double buildX=19.75; // Initial X Position
+    double buildY=10.0; // Initial Y Position
     double buildDx=2;  // Distance X between buildings
     double buildDy=3;  // Distance Y between buildings
     double buildLx=0.5;   // X Length
@@ -286,7 +327,7 @@ TreePhysicalDistribution(ns3::NodeContainer& gnbNodes, ns3::NodeContainer& ueNod
         
     }
 
-    PrintPhysicalDistributionToJson();
+    PrintPhysicalDistributionToJson(gnbNodes, "\"istree\" : 1");
 }
 
 void 
@@ -300,7 +341,7 @@ IndoorRouterPhysicalDistribution(ns3::NodeContainer& gnbNodes, ns3::NodeContaine
 
     // set mobile device and base station antenna heights in meters, according to the chosen scenario
     if (scenario == "UMa") {
-        hBS = 25;
+        hBS = 5.5; // https://www.subtel.gob.cl/cableado/
         hUE = 1.5;
 
     } else {
@@ -309,8 +350,8 @@ IndoorRouterPhysicalDistribution(ns3::NodeContainer& gnbNodes, ns3::NodeContaine
 
     // RB Info and position
     // uint16_t gNbNum = 1;    // Numbers of RB
-    double gNbX = 50.0;     // X position
-    double gNbY = 60.0;     // Y position
+    double gNbX = 30.0;     // X position
+    double gNbY = 42.0;     // Y position
     uint16_t gNbD = 80;     // Distance between gNb
 
     // Build extra vars
@@ -330,8 +371,8 @@ IndoorRouterPhysicalDistribution(ns3::NodeContainer& gnbNodes, ns3::NodeContaine
     // Apartments are 30 m^2 (6,5 <-> x,y) and there are 6 per floor
     // Each floor is 3 meters tall
     // There is a total of 10 floors
-    double buildX = 40.0; // Initial X Position
-    double buildY = 20.0; // Initial Y Position
+    double buildX = 20.0; // Initial X Position
+    double buildY = 2.0; // Initial Y Position
     double buildDx = 10;  // Distance X between buildings (Not used in IndoorRouter)
     double buildDy = 10;  // Distance Y between buildings (Not used in IndoorRouter)
     double buildLx = nApartmentsX * apartmentLenX;   // X Length
@@ -413,5 +454,5 @@ IndoorRouterPhysicalDistribution(ns3::NodeContainer& gnbNodes, ns3::NodeContaine
         
     }
 
-    PrintPhysicalDistributionToJson();
+    PrintPhysicalDistributionToJson(gnbNodes);
 }
