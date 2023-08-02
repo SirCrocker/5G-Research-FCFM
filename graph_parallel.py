@@ -50,12 +50,12 @@ def getArrayForViolin():
     for simFolder in folders:
         thr, delay = read_flow_output(simFolder)
         sim1Root = os.path.join(simFolder, "SIM1", "graph.ini")
-        targetBler = configparser.ConfigParser()
-        targetBler.read(sim1Root)
-        targetBler = targetBler["general"]["blerTarget"]
+        simLabel = configparser.ConfigParser()
+        simLabel.read(sim1Root)
+        simLabel = simLabel["general"]["simlabel"]
         
-        tempThr.append({targetBler:thr})
-        tempDelay.append({targetBler:delay})
+        tempThr.append({simLabel:thr})
+        tempDelay.append({simLabel:delay})
 
     tempThr.sort(key=lambda x:list(x)[0])
     tempDelay.sort(key=lambda x:list(x)[0])
@@ -73,8 +73,8 @@ def getArrayForViolin():
 def violinGraphThr(data):    
 
     plt.violinplot(data["data"], showmeans=True)
-    plt.suptitle("Comparison of throughput in scenario 2")
-    plt.title("Values of target BLER are changed.")
+    plt.suptitle("Comparison of throughput showin the mean")
+    plt.title("Combination of scenarios-algorithms.")
     plt.xlabel("Target BLER")
     plt.ylabel("Throughput [Mb/s]")
     plt.xticks(np.arange(1, len(data["labels"])+1), labels=data["labels"])
@@ -87,8 +87,8 @@ def violinGraphThr(data):
 def violinGraphDelay(data):    
 
     plt.violinplot(data["data"], showmeans=True)
-    plt.suptitle("Comparison of Delay in scenario 2")
-    plt.title("Values of target BLER are changed.")
+    plt.suptitle("Comparison of Delay showing the mean")
+    plt.title("Combination of scenarios-algorithms.")
     plt.xlabel("Target BLER")
     plt.ylabel("Delay [ms]")
     plt.xticks(np.arange(1, len(data["labels"])+1), labels=data["labels"])
