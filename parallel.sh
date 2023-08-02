@@ -88,7 +88,7 @@ for param in "${parameters[@]}"; do
 
         param2=$param;
         if [ "$random" == "1" ]; then
-            param2="$param --RngRun=$sim_num"
+            param2="$param --RngRun=$mont_num"
         fi
 
         stdoutTxt=$RUTA_PROBE/out/$outdir/outputs/sim${mont_num}.txt
