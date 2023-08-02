@@ -223,7 +223,7 @@ TreePhysicalDistribution(ns3::NodeContainer& gnbNodes, ns3::NodeContainer& ueNod
 
     // set mobile device and base station antenna heights in meters, according to the chosen scenario
     if (scenario == "UMa") {
-        hBS = 25;
+        hBS = 20;
         hUE = 1.5;
 
     } else {
@@ -350,8 +350,8 @@ IndoorRouterPhysicalDistribution(ns3::NodeContainer& gnbNodes, ns3::NodeContaine
 
     // RB Info and position
     // uint16_t gNbNum = 1;    // Numbers of RB
-    double gNbX = 30.0;     // X position
-    double gNbY = 42.0;     // Y position
+    double gNbX = 10.0;     // X position
+    double gNbY = 20.0;     // Y position
     uint16_t gNbD = 80;     // Distance between gNb
 
     // Build extra vars
@@ -371,7 +371,7 @@ IndoorRouterPhysicalDistribution(ns3::NodeContainer& gnbNodes, ns3::NodeContaine
     // Apartments are 30 m^2 (6,5 <-> x,y) and there are 6 per floor
     // Each floor is 3 meters tall
     // There is a total of 10 floors
-    double buildX = 20.0; // Initial X Position
+    double buildX = 5.0; // Initial X Position
     double buildY = 2.0; // Initial Y Position
     double buildDx = 10;  // Distance X between buildings (Not used in IndoorRouter)
     double buildDy = 10;  // Distance Y between buildings (Not used in IndoorRouter)
