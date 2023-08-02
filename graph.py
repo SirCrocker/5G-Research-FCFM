@@ -191,8 +191,8 @@ def graphSinrCtrl():
     
     SINR.groupby('RNTI')['SINR(dB)'].plot(title=title)
     #plt.ylim([min(15, SINR['SINR(dB)'].min()) , max(30,SINR['SINR(dB)'].max())])
-    ax.set_ylabel("SINR(dB)")
-    ax.set_xlabel("Time(s)")
+    ax.set_ylabel("SINR [dB]")
+    ax.set_xlabel("Time [s]")
     plt.suptitle(title)
     plt.title(SUBTITLE)
     fig.savefig(HOMEPATH + SIM_PREFIX + "SinrCtrl" +'.png', dpi=300)
@@ -229,8 +229,8 @@ def graphSinrData():
     sinr.groupby('RNTI')['sinr'].plot()
 
     #plt.ylim([min(30, sinr['sinr'].min()) , max(60,sinr['sinr'].max())])
-    ax.set_ylabel("SINR(dB)")
-    ax.set_xlabel("Time(s)")
+    ax.set_ylabel("SINR [dB]")
+    ax.set_xlabel("Time [s]")
     plt.suptitle(title)
     plt.title(SUBTITLE)
     fig.savefig(HOMEPATH + SIM_PREFIX + "SinrData" + '.png', dpi=300)
@@ -255,7 +255,7 @@ def graphCQI():
     CQI.groupby('rnti')['CQI'].plot(title=title)
     plt.ylim([0, 16])
     ax.set_ylabel("CQI")
-    ax.set_xlabel("Time(s)")
+    ax.set_xlabel("Time [s]")
     plt.suptitle(title)
     plt.title(SUBTITLE)
     fig.savefig(HOMEPATH + SIM_PREFIX + title +'.png', dpi=300)
@@ -296,7 +296,7 @@ def graphTbler():
     plt.axhline(y=0.5, color='red', linestyle='--', label='BLER = 0.5')
     
     plt.legend(loc='center left', bbox_to_anchor=(1, 0.5))
-    plt.xlabel("Time(s)")
+    plt.xlabel("Time [s]")
     plt.ylabel("BLER")
     plt.ylim(bottom=None, top=10**0)
     # ax.set_ylim([abs(min([(1e-20) ,BLER.TBler.min()*0.9])) , 1])
@@ -327,6 +327,9 @@ def graphPathLoss():
     ploos.groupby(['IMSI'])['pathLoss(dB)'].plot(title=file)
     plt.suptitle(title)
     plt.title(SUBTITLE)
+    plt.xlabel("Time [s]")
+    plt.ylabel("Path loss [dB]")
+    fig.set_size_inches(6.6, 4.8)
     fig.savefig(HOMEPATH + SIM_PREFIX + "PathLoss" + '.png', dpi=300)
     plt.close()
 
@@ -652,10 +655,13 @@ def graphPdcpDelay():
 
     ret['InsertedDate']=ret.index
     ret['Time']=ret['InsertedDate'].astype(np.int64)/1e9
+    ret['delay'] = ret['delay'] * 1000
 
     ret=ret.set_index('Time')
     ret.groupby(['rnti'])['delay'].plot(title=title)
-    ax.set_ylabel("delay(s)")
+    ax.set_xlabel("Time [s]")
+    ax.set_ylabel("Delay [ms]")
+
     plt.suptitle(title)
     plt.title(SUBTITLE)
     fig.savefig(HOMEPATH + SIM_PREFIX + 'PdcpDelay' + '.png', dpi=300)
