@@ -32,7 +32,7 @@ using namespace ns3;
 /* Global Variables */
 auto tic = std::chrono::high_resolution_clock::now();       // Initial time
 auto itime = std::chrono::high_resolution_clock::now();     // Initial time 2
-double simTime = 7;            // in seconds
+double simTime = 10;            // in seconds
 
 /* Auxiliary Vars */
 const uint32_t SGW_SYS_ID = 0x2D574753;
@@ -90,7 +90,7 @@ int main(int argc, char* argv[]) {
     std::string scenario = "UMa";   // scenario
     BandwidthPartInfo::Scenario scenarioEnum = BandwidthPartInfo::UMa;
 
-    double dataRate = 1400;      //Mbps
+    double dataRate = 1000;      //Mbps
     double serverDelay = 0.01;  // remote 0.040 ; edge 0.004
     double rlcBufferPerc = 100; // x*DBP
     double rlcBuffer;           // Se calcula más abajo, según serverType
