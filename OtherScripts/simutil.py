@@ -1,3 +1,4 @@
+import matplotlib.pyplot as plt
 import pandas as pd
 import functools
 import time
@@ -54,6 +55,8 @@ def info_n_time_decorator(name, debug=False):
                 if debug:
                     print(f"Exception thrown: {e}")
                 func_ret = False
+            finally:
+                plt.close()
 
             if func_ret:
                 toc = time.time()
