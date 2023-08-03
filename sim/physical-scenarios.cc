@@ -232,8 +232,8 @@ TreePhysicalDistribution(ns3::NodeContainer& gnbNodes, ns3::NodeContainer& ueNod
 
     // RB Info and position
     // uint16_t gNbNum = 1;    // Numbers of RB
-    double gNbX = 30.0;     // X position
-    double gNbY = 30.0;     // Y position
+    double gNbX = 20.0;     // X position
+    double gNbY = 150.0;     // Y position
     uint16_t gNbD = 80;     // Distance between gNb
 
     // UE Info and position
@@ -244,16 +244,16 @@ TreePhysicalDistribution(ns3::NodeContainer& gnbNodes, ns3::NodeContainer& ueNod
 
     // BUILDING Position
     bool enableBuildings = true; // 
-    uint32_t numOfTrees = 9;
-    uint32_t gridWidth = numOfTrees ; // "The number of objects laid out on a line."
+    uint32_t numOfTrees = 5*3;
+    uint32_t gridWidth = numOfTrees/3 ; // "The number of objects laid out on a line."
     uint32_t nApartments = 0;
     uint32_t nFloors = 1;
     double height = 7; // Height of the trees in meters
 
-    double buildX=19.75; // Initial X Position
-    double buildY=10.0; // Initial Y Position
-    double buildDx=2;  // Distance X between buildings
-    double buildDy=3;  // Distance Y between buildings
+    double buildX=10; // Initial X Position
+    double buildY=15.0; // Initial Y Position
+    double buildDx=4;  // Distance X between buildings
+    double buildDy=40;  // Distance Y between buildings
     double buildLx=0.5;   // X Length
     double buildLy=0.5;   // Y Length
 
@@ -313,18 +313,41 @@ TreePhysicalDistribution(ns3::NodeContainer& gnbNodes, ns3::NodeContainer& ueNod
         gridBuildingAllocator->SetBuildingAttribute("ExternalWallsType", EnumValue(Building::Wood));
         gridBuildingAllocator->Create(numOfTrees);
 
-        // position of the Buildings
-        Ptr<ListPositionAllocator> buildingPositionAlloc = CreateObject<ListPositionAllocator>();
-        buildingPositionAlloc->Add(Vector(buildX, buildY, 0.0));
-        MobilityHelper buildingmobility;
-        buildingmobility.SetMobilityModel("ns3::ConstantPositionMobilityModel");
-        buildingmobility.SetPositionAllocator(buildingPositionAlloc);
+        // // position of the Buildings
+        // Ptr<ListPositionAllocator> buildingPositionAlloc = CreateObject<ListPositionAllocator>();
+        // buildingPositionAlloc->Add(Vector(buildX, buildY, 0.0));
+        // MobilityHelper buildingmobility;
+        // buildingmobility.SetMobilityModel("ns3::ConstantPositionMobilityModel");
+        // buildingmobility.SetPositionAllocator(buildingPositionAlloc);
 
+
+        uint32_t numOfTrees = 5*3;
+        uint32_t gridWidth = numOfTrees/3 ; // "The number of objects laid out on a line."
+        double buildX=12; // Initial X Position
+        double buildY=35.0; // Initial Y Position
+
+        Ptr<GridBuildingAllocator> gridBuildingAllocator_2;
+        gridBuildingAllocator_2 = CreateObject<GridBuildingAllocator>();
+        gridBuildingAllocator_2->SetAttribute("GridWidth", UintegerValue(gridWidth)); // The number of objects laid out on a line. 1 as a column of building
+        gridBuildingAllocator_2->SetAttribute("MinX", DoubleValue(buildX)); // The x coordinate where the grid starts.
+        gridBuildingAllocator_2->SetAttribute("MinY", DoubleValue(buildY)); // The y coordinate where the grid starts.
+        gridBuildingAllocator_2->SetAttribute("LengthX", DoubleValue(buildLx)); // the length of the wall of each building along the X axis.
+        gridBuildingAllocator_2->SetAttribute("LengthY", DoubleValue(buildLy)); // the length of the wall of each building along the X axis.
+        gridBuildingAllocator_2->SetAttribute("DeltaX", DoubleValue(buildDx)); // The x space between buildings.
+        gridBuildingAllocator_2->SetAttribute("DeltaY", DoubleValue(buildDy)); // The y space between buildings.
+        gridBuildingAllocator_2->SetAttribute("Height", DoubleValue(height)); // The height of the building (roof level)
+        gridBuildingAllocator_2->SetAttribute("LayoutType", EnumValue (GridPositionAllocator::ROW_FIRST)); // The type of layout. ROW_FIRST COLUMN_FIRST
+
+        gridBuildingAllocator_2->SetBuildingAttribute("NRoomsX", UintegerValue(nApartments));
+        gridBuildingAllocator_2->SetBuildingAttribute("NRoomsY", UintegerValue(nApartments));
+        gridBuildingAllocator_2->SetBuildingAttribute("NFloors", UintegerValue(nFloors));
+        gridBuildingAllocator_2->SetBuildingAttribute("ExternalWallsType", EnumValue(Building::Wood));
+        gridBuildingAllocator_2->Create(numOfTrees);
+        
         BuildingsHelper::Install(gnbNodes);
         BuildingsHelper::Install(ueNodes);
 
-        std::cout << TXT_CYAN << "Installed tree distribution." << TXT_CLEAR << std::endl;
-        
+        std::cout << TXT_CYAN << "Installed Tree distribution." << TXT_CLEAR << std::endl;
     }
 
     PrintPhysicalDistributionToJson(gnbNodes, "\"istree\" : 1");
@@ -351,7 +374,7 @@ IndoorRouterPhysicalDistribution(ns3::NodeContainer& gnbNodes, ns3::NodeContaine
     // RB Info and position
     // uint16_t gNbNum = 1;    // Numbers of RB
     double gNbX = 10.0;     // X position
-    double gNbY = 20.0;     // Y position
+    double gNbY = 25.0;     // Y position
     uint16_t gNbD = 80;     // Distance between gNb
 
     // Build extra vars
@@ -380,12 +403,12 @@ IndoorRouterPhysicalDistribution(ns3::NodeContainer& gnbNodes, ns3::NodeContaine
 
     // UE Info and position
     // uint16_t ueNumPergNb = 1;   // Numbers of User per RB
-    double ueDistance = .50;    //Distance between UE
+    // double ueDistance = .50;    //Distance between UE
     // Located at Apt2, the 1.5 its so it places in the middle of the apt
-    double xUE = buildX + apartmentLenX * 1.5; // Initial X Position UE
-    double yUE = buildY + apartmentLenY * 2 - 1; // Initial Y Position UE
-    uint8_t UEfloor = 2;  // Floor where the UE is located floor
-    hUE = floorHeight * UEfloor + 1.5; // Z position of the UE (in [1, nFloors))
+    double xUE = buildX + apartmentLenX * 2.5; // Initial X Position UE
+    double yUE = buildY + apartmentLenY * 1 - 1; // Initial Y Position UE
+    uint8_t UEfloor = 3;  // Floor where the UE is located floor (in [1, nFloors))
+    hUE = floorHeight * UEfloor + 1.5; // Z position of the UE
 
     // Set position of the base stations
     std::cout << TXT_CYAN << "Positioning Nodes" << TXT_CLEAR << std::endl;
@@ -409,8 +432,8 @@ IndoorRouterPhysicalDistribution(ns3::NodeContainer& gnbNodes, ns3::NodeContaine
     // Set Initial Position of UE
     for (uint32_t u = 0; u < ueNodes.GetN(); ++u)
     {
-        std::cout << "UE: " << u << "\t" << "Pos: "<<"(" << xUE << "," << yUE +ueDistance*u <<")" << "\t" << "Speed: (" << speed << ", 0)" <<std::endl;
-        ueNodes.Get(u)->GetObject<MobilityModel>()->SetPosition(Vector((float)xUE, (float) yUE +(float)ueDistance*u, hUE)); // (x, y, z) in m
+        std::cout << "UE: " << u << "\t" << "Pos: "<<"(" << xUE << "," << yUE << "," << hUE + u * floorHeight << ")" << "\tFloor: " << u+1 << "\t" << "Speed: (" << speed << ", 0)" <<std::endl;
+        ueNodes.Get(u)->GetObject<MobilityModel>()->SetPosition(Vector((float)xUE, (float) yUE, hUE + u * floorHeight)); // (x, y, z) in m
         ueNodes.Get(u)->GetObject<ConstantVelocityMobilityModel>()->SetVelocity(Vector( speed, 0,  0)); // move UE1 along the x axis
     }
 
