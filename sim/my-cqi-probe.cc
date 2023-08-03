@@ -42,9 +42,10 @@ const uint32_t UE_SYS_ID  = 0x2D2D4555; // UE System ID base (every UE starts fr
 const uint32_t RH_SYS_ID  = 0x2D2D4852; // RH System ID base
 
 /* Noise vars */
-const double NOISE_MEAN = 25;    // Default value is 5
-const double NOISE_VAR = 2;     // Noise variance
-const double NOISE_BOUND = 10;   // Noise bound, read NormalDistribution for info about the parameter.
+// Mean chosen by https://www.qualcomm.com/content/dam/qcomm-martech/dm-assets/documents/5g_nr_millimeter_wave_network_coverage_simulation_studies_for_global_cities.pdf page 4
+const double NOISE_MEAN = 9;    // Default value is 5
+const double NOISE_VAR = 1;     // Noise variance
+const double NOISE_BOUND = 3;   // Noise bound, read NormalDistribution for info about the parameter.
 const Time NOISE_T_RES = MilliSeconds(15); // Time to schedule the add noise function
 
 const double SEGMENT_SIZE = 1448.0;   // Maximum number of bytes a packet can have
@@ -80,16 +81,16 @@ int main(int argc, char* argv[]) {
     bool logging = true;    // whether to enable logging from the simulation, another option is by
                             // exporting the NS_LOG environment variable
     bool shadowing = true;  // to enable shadowing effect
-    bool addNoise = false;  // To enable/disable AWGN
+    bool addNoise = true;  // To enable/disable AWGN
 
     // double hBS;          // base station antenna height in meters
     // double hUE;          // user antenna height in meters
-    double txPower = 40; // txPower
+    double txPower = 18; // txPower [dBm] : mmWave antenna in urban area (600cm^2 total) https://www.subtel.gob.cl/antenas1/
     uint16_t numerology = 3;        // 120 kHz and 125 microseg
     std::string scenario = "UMa";   // scenario
     BandwidthPartInfo::Scenario scenarioEnum = BandwidthPartInfo::UMa;
 
-    double dataRate = 100;      //Mbps
+    double dataRate = 1400;      //Mbps
     double serverDelay = 0.01;  // remote 0.040 ; edge 0.004
     double rlcBufferPerc = 100; // x*DBP
     double rlcBuffer;           // Se calcula más abajo, según serverType
@@ -113,7 +114,7 @@ int main(int argc, char* argv[]) {
     uint16_t gNbD = 80;     // Distance between gNb
 
     // UE Info and position
-    uint16_t ueNumPergNb = 1;   // Numbers of User per RB
+    uint16_t ueNumPergNb = 2;   // Numbers of User per RB
     // double ueDistance = .50;    //Distance between UE
     // double xUE=30;  //Initial X Position UE
     // double yUE=10;  //Initial Y Position UE
@@ -162,8 +163,8 @@ int main(int argc, char* argv[]) {
     cmd.AddValue("stepFrequency", "Time between activations of Probe CQI in s", stepFrequency);
     cmd.AddValue("addNoise", "Add normal distributed noise to the simulation", addNoise);
     cmd.AddValue("blerTarget", "Set the bler target for the AMC (Default: 0.1)", blerTarget);
-    cmd.AddValue("amcAlgo", "Choose the algorithm to be used in the amc possible values:\n\t0:Original\n\t1:ProbeCqi\n\t2:NewBlerTarget\n\t3:ExpBlerTarget", amcAlgorithm);
-    cmd.AddValue("phyDistro", "Physical distribution of the Buildings-UEs-gNbs. Options:\n\t0:Default\n\t1:Trees\n\t2:Indoor Router", phyDistro);   
+    cmd.AddValue("amcAlgo", "Choose the algorithm to be used in the amc possible values:\n\t0:Original\n\t1:ProbeCqi\n\t2:NewBlerTarget\n\t3:ExpBlerTarget\nCurrent value: ", amcAlgorithm);
+    cmd.AddValue("phyDistro", "Physical distribution of the Buildings-UEs-gNbs. Options:\n\t0:Default\n\t1:Trees\n\t2:Indoor Router\nCurrent value: ", phyDistro);   
 
     cmd.Parse(argc, argv);
 
@@ -414,13 +415,16 @@ int main(int argc, char* argv[]) {
 
     if (addNoise) 
     {   
-        // Get the physical layer and add noise whenerver DlDataSinr is executed
-        Ptr<NrUePhy> uePhy = nrHelper->GetUePhy(ueNetDev.Get(0), 0);
-        uePhy->SetNoiseFigure(NOISE_MEAN);
-
-        for (int i = 0; i < (Seconds(simTime) - Seconds(0.2)) / NOISE_T_RES; i++)
+        for (uint32_t u = 0; u < ueNodes.GetN(); ++u)
         {
-            Simulator::Schedule(NOISE_T_RES * i + Seconds(0.1), &AddRandomNoise, uePhy);
+            // Get the physical layer and add noise whenerver DlDataSinr is executed
+            Ptr<NrUePhy> uePhy = nrHelper->GetUePhy(ueNetDev.Get(u), 0);
+            uePhy->SetNoiseFigure(NOISE_MEAN);
+
+            for (int i = 0; i < (Seconds(simTime) - Seconds(0.2)) / NOISE_T_RES; i++)
+            {
+                Simulator::Schedule(NOISE_T_RES * i + Seconds(0.1), &AddRandomNoise, uePhy);
+            }
         }
     }
 
@@ -606,7 +610,7 @@ int main(int argc, char* argv[]) {
     inif << "ProbeCqiDuration = " << ProbeCqiDuration.GetSeconds()*1000 << " ms" << std::endl;
     inif << "stepFrequency = " << stepFrequency.GetSeconds()*1000 << " ms" << std::endl;
     inif << "addNoise = " << addNoise << std::endl;
-    inif << "blerTarget = " << blerTarget << std::endl;
+    inif << "simlabel = " << "A" << amcAlgorithm << "S" << phyDistro << std::endl;
 
     inif << std::endl;
     inif << "[gNb]" << std::endl;
