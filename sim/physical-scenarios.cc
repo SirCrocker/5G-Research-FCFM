@@ -432,7 +432,7 @@ IndoorRouterPhysicalDistribution(ns3::NodeContainer& gnbNodes, ns3::NodeContaine
     // Set Initial Position of UE
     for (uint32_t u = 0; u < ueNodes.GetN(); ++u)
     {
-        std::cout << "UE: " << u << "\t" << "Pos: "<<"(" << xUE << "," << yUE << "," << hUE + u * floorHeight << ")" << "\tFloor: " << u+1 << "\t" << "Speed: (" << speed << ", 0)" <<std::endl;
+        std::cout << "UE: " << u << "\t" << "Pos: "<<"(" << xUE << "," << yUE << "," << hUE + u * floorHeight << ")" << "\tFloor: " << u + UEfloor << "\t" << "Speed: (" << speed << ", 0)" <<std::endl;
         ueNodes.Get(u)->GetObject<MobilityModel>()->SetPosition(Vector((float)xUE, (float) yUE, hUE + u * floorHeight)); // (x, y, z) in m
         ueNodes.Get(u)->GetObject<ConstantVelocityMobilityModel>()->SetVelocity(Vector( speed, 0,  0)); // move UE1 along the x axis
     }
