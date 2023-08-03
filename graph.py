@@ -171,7 +171,7 @@ def graphMobility():
     ax.set_ylabel("Distance [m]")
 
 
-    fig.savefig(HOMEPATH + SIM_PREFIX + title +'PhyDistro.png', dpi=300)
+    fig.savefig(HOMEPATH + SIM_PREFIX +'PhyDistro.png', dpi=300)
     plt.close()
 
     return True
@@ -682,12 +682,12 @@ def graphUdpDelay():
     udpstats = pd.read_csv(filepath, sep="\t")
 
     time = udpstats["Time (s)"]
-    delay = udpstats["Delay"]
+    delay = udpstats["Delay"] * 1000
 
     plt.plot(time, delay)
     plt.suptitle(title)
     plt.title(SUBTITLE)
-    plt.ylabel("Delay [s]")
+    plt.ylabel("Delay [ms]")
     plt.xlabel("Time [s]")
     plt.savefig(HOMEPATH + SIM_PREFIX + "AppDelay" + ".png", dpi=300)
     plt.close()
