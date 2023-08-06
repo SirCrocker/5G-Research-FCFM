@@ -124,7 +124,7 @@ def violinGraphThr(data):
     plt.violinplot(data["data"], showmeans=True, showextrema=True)
     plt.suptitle("Comparison of throughput showing the mean")
     plt.title("Combination of Algorithms-Scenarios.")
-    plt.xlabel("Algorithms-Scenarios")
+    plt.xlabel("Algorithm-Scenario")
     plt.ylabel("Throughput [Mb/s]")
     plt.xticks(np.arange(1, len(data["labels"])+1), labels=data["labels"])
     plt.savefig(os.path.join(PATH, "Thr-Violin-Par.png"), dpi=300)
@@ -138,8 +138,8 @@ def violinGraphDelay(data):
 
     plt.violinplot(data["data"], showmeans=True)
     plt.suptitle("Comparison of Delay showing the mean")
-    plt.title("Combination of scenarios-algorithms.")
-    plt.xlabel("Algorithms-Scenarios")
+    plt.title("Combination of Algorithms-Scenarios.")
+    plt.xlabel("Algorithm-Scenario")
     plt.ylabel("Delay [ms]")
     plt.xticks(np.arange(1, len(data["labels"])+1), labels=data["labels"])
     plt.savefig(os.path.join(PATH, "Delay-Violin-Par.png"), dpi=300)
@@ -149,20 +149,24 @@ def violinGraphDelay(data):
 
 
 @info_n_time_decorator("Retransmissions", True)
-def rtx_graph_delay():
+def stackedbar_graph_rtx():
     data_dict = data_from_file_to_dict('RxPacketTrace.txt')
 
     RTX_OPTIONS = pd.Series(0, index=range(-1, 4), dtype=np.float64)
     for i, df in enumerate(data_dict["data"]):
-        df["rtxNum"] = df["rv"]
-        df.loc[(df["rv"] == 3) & (df["corrupt"] == 1), "rtxNum"] = -1
-        to_join = (df["rtxNum"].value_counts(normalize=True)*100)\
+        df["rtxNum"] = df.loc[df['direction'] == 'DL', "rv"]
+        df.loc[(df["rv"] == 3) &
+               (df["corrupt"] == 1) &
+               (df['direction'] == 'DL'), "rtxNum"] = -1
+
+        to_add = (df["rtxNum"].value_counts(normalize=True)*100)\
             .sort_index()
 
-        data_dict["data"][i] = RTX_OPTIONS.add(to_join, fill_value=0).to_list()
+        data_dict["data"][i] = RTX_OPTIONS.add(to_add, fill_value=0).to_list()
 
     colors = ["#BE0000", "#019875", "#72CC50", "#BFD834", "#00AEAD"]
     bottom = np.zeros(len(data_dict["labels"]))
+
     for i, nrtx in enumerate(["Failed", "No rtx", "1 rtx", "2 rtx", "3 rtx"]):
         values = np.array([x[i] for x in data_dict["data"]])
         plt.bar(data_dict["labels"], values, 0.69, label=nrtx,
@@ -184,6 +188,28 @@ def rtx_graph_delay():
     return True
 
 
+@info_n_time_decorator("Violin BLER", True)
+def violin_graph_bler():
+    data_dict = data_from_file_to_dict('RxPacketTrace.txt')
+
+    for i, df in enumerate(data_dict["data"]):
+        data_dict["data"][i] = df.loc[(df["direction"] == "DL"), "TBler"]\
+                                 .to_list()
+
+    plt.violinplot(data_dict["data"], showmeans=True)
+    plt.suptitle("Comparison of accumulated BLER showing the mean")
+    plt.title("Combination of Algorithms-Scenarios.")
+    plt.xlabel("Algorithm-Scenario")
+    plt.ylabel("BLER")
+    plt.yscale("log")
+    plt.xticks(np.arange(1, len(data_dict["labels"])+1),
+               labels=data_dict["labels"])
+    plt.savefig(os.path.join(PATH, "BLER-Violin-Par.png"), dpi=300)
+    plt.close()
+
+    return True
+
+
 if __name__ == "__main__":
     if len(sys.argv) == 2:
         PATH = sys.argv[1]
@@ -194,4 +220,5 @@ if __name__ == "__main__":
     t, d = get_array_for_violin()
     violinGraphThr(t)
     violinGraphDelay(d)
-    rtx_graph_delay()
+    stackedbar_graph_rtx()
+    violin_graph_bler()
