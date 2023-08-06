@@ -9,13 +9,13 @@ source "paths.cfg"
 os=$(uname)
 
 # Parallelize simulations
-parameters=("--amcAlgo=2 --blerTarget=0.1" 
-            "--amcAlgo=2 --blerTarget=0.2"
-            "--amcAlgo=2 --blerTarget=0.3"
-            "--amcAlgo=2 --blerTarget=0.4"
-            "--amcAlgo=2 --blerTarget=0.5"
-            "--amcAlgo=2 --blerTarget=0.6"
-            "--amcAlgo=2 --blerTarget=0.7")
+parameters=("--amcAlgo=0 --phyDistro=1 -simTime=3" 
+            "--amcAlgo=0 --phyDistro=2 -simTime=3")
+            # "--amcAlgo=2 --phyDistro=1 -simTime=3 --blerTarget=0.3"
+            # "--amcAlgo=2 --phyDistro=2 -simTime=3 --blerTarget=0.3"
+            # "--amcAlgo=3 --phyDistro=1 -simTime=3"
+            # "--amcAlgo=3 --phyDistro=2 -simTime=3")
+
 montecarlo=2
 # Num of cores will be the number of parallel simulations
 num_cores=$(nproc)
@@ -25,7 +25,7 @@ outpath==""
 sim_num=1
 nparam=0
 custom_name=""
-random=0
+random=1
 build_ns3=1
 
 helpFunction()
@@ -33,8 +33,8 @@ helpFunction()
    echo ""
    echo "Usage: $0 -m $montecarlo -c $custom_name -r -b"
    echo -e "\t-m Number of montecarlo iterations"
-   echo -e "\t-c Custom folder name for the simulation data, the number of parameter will be prefixed"
-   echo -e "\t-r Flag that sets that a random run is used so results are not deterministic"
+   echo -e "\t-c Custom folder name for the folder with the differnet simulations, the word \"PAR-\" will be prefixed"
+   echo -e "\t-r Flag that sets that a random run is NOT used so results ARE deterministic"
    echo -e "\t-b Skips the build step of ns3, it always build by default"
    exit 1 # Exit script after printing help
 }
@@ -44,7 +44,7 @@ do
    case "$opt" in
       m ) montecarlo="$OPTARG" ;;
       c ) custom_name="$OPTARG" ;;
-      r ) random=1 ;;
+      r ) random=0 ;;
       b ) build_ns3=0 ;;
       ? ) helpFunction ;; # Print helpFunction in case parameter is non-existent
    esac
@@ -70,13 +70,14 @@ for param in "${parameters[@]}"; do
 
         if ([ "$custom_name" == "" ] || [[ $custom_name = *" "* ]])
         then
-            outdir="PAR${nparam}M${montecarlo}-"`date +%Y%m%d_%H%M%S`
+            batch_dir_name="PAR_BATCH-"`date +%Y%m%d_%H%M%S`
         else
-            outdir="$nparam-$custom_name"
+            batch_dir_name="PAR-$custom_name"
         fi
 
-        mkdir "$RUTA_PROBE/out/$outdir"
-        mkdir "$RUTA_PROBE/out/$outdir/outputs"
+        outdir="${batch_dir_name}/PARAM${nparam}MON${montecarlo}"
+
+        mkdir -p "$RUTA_PROBE/out/$outdir/outputs"
         echo "$param" > "$RUTA_PROBE/out/$outdir/parameters.txt"
 
         ((nparam++))
@@ -107,3 +108,6 @@ done
 
 jobs
 wait
+
+printf "${cyan}Running Graph script...${clear}"
+python3 "${RUTA_PROBE}/graph_parallel.py" "$RUTA_PROBE/out/$batch_dir_name"
