@@ -246,7 +246,7 @@ TreePhysicalDistribution(ns3::NodeContainer& gnbNodes, ns3::NodeContainer& ueNod
     bool enableBuildings = true; // 
     uint32_t numOfTrees = 5*3;
     uint32_t gridWidth = numOfTrees/3 ; // "The number of objects laid out on a line."
-    uint32_t nApartments = 0;
+    uint32_t nApartments = 50;
     uint32_t nFloors = 1;
     double height = 7; // Height of the trees in meters
 
@@ -254,8 +254,8 @@ TreePhysicalDistribution(ns3::NodeContainer& gnbNodes, ns3::NodeContainer& ueNod
     double buildY=15.0; // Initial Y Position
     double buildDx=4;  // Distance X between buildings
     double buildDy=40;  // Distance Y between buildings
-    double buildLx=0.5;   // X Length
-    double buildLy=0.5;   // Y Length
+    double buildLx=1;   // X Length
+    double buildLy=1;   // Y Length
 
     // Set position of the base stations
     std::cout << TXT_CYAN << "Positioning Nodes" << TXT_CLEAR << std::endl;
