@@ -191,6 +191,7 @@ class NrAmc : public Object
     uint8_t ProbeCqiAlgorithm(const SpectrumValue& sinr, uint8_t& mcs) const;
     uint8_t OriginalCqiAlgorithm(const SpectrumValue& sinr, uint8_t& mcs) const;
     uint8_t ExpBlerCqiAlgorithm(const SpectrumValue& sinr, uint8_t& mcs) const;
+    uint8_t HybridBlerCqiAlgorithm(const SpectrumValue& sinr, uint8_t& mcs) const;
 
     /**
      * This algorithm follows the same procedure as the original algorithm to obtain
@@ -207,7 +208,8 @@ class NrAmc : public Object
       LENA_DEFAULT,
       PROBE_CQI,
       NEW_BLER_TARGET,
-      EXP_BLER_TARGET
+      EXP_BLER_TARGET,
+      HYBRID_BLER_TARGET
     };
 
     /* Functions to change the CQI/BLER/MCS algorithm */
@@ -227,7 +229,7 @@ class NrAmc : public Object
     inline static uint8_t m_setCqiVal = 0;
 
     /* New Bler Target Algorithm auxiliary functions and variables */
-    inline static double m_blerTarget = 0.1;
+    inline static double m_blerTarget = 0.1; // Also used in hybrid bler target
     static void SetBlerTarget(double blerTarget);
 
 

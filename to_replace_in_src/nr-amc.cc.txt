@@ -234,6 +234,10 @@ NrAmc::CreateCqiFeedbackWbTdma(const SpectrumValue& sinr, uint8_t& mcs) const
             cqi = ExpBlerCqiAlgorithm(sinr, mcs);
             break;
 
+        case HYBRID_BLER_TARGET:
+            cqi = HybridBlerCqiAlgorithm(sinr, mcs);
+            break;
+
         case LENA_DEFAULT:
         default:
             cqi = OriginalCqiAlgorithm(sinr, mcs);
@@ -488,6 +492,83 @@ NrAmc::ExpBlerCqiAlgorithm(const SpectrumValue& sinr, uint8_t& mcs) const
         NS_LOG_DEBUG("Para el SINReff " << sinr_eff_db << " [dB], se tiene exp_blerTarget = " << exp_blerTarget);
 
         if (output->m_tbler > exp_blerTarget)
+        {
+            break;
+        }
+        mcs++;
+    }
+
+    if (mcs > 0)
+    {
+        mcs--;
+    }
+
+    if ((output->m_tbler > 0.1) && (mcs == 0))
+    {
+        cqi = 0;
+    }
+    else if (mcs == m_errorModel->GetMaxMcs())
+    {
+        cqi = 15; // all MCSs can guarantee the 10 % of BER
+    }
+    else
+    {
+        double s = m_errorModel->GetSpectralEfficiencyForMcs(mcs);
+        cqi = 0;
+        while ((cqi < 15) && (m_errorModel->GetSpectralEfficiencyForCqi(cqi + 1) <= s))
+        {
+            ++cqi;
+        }
+    }
+    NS_LOG_DEBUG(this << "\t MCS " << (uint16_t)mcs << "-> CQI " << +cqi);
+    return cqi;
+}
+
+uint8_t
+NrAmc::HybridBlerCqiAlgorithm(const SpectrumValue& sinr, uint8_t& mcs) const
+{
+    uint8_t cqi = 0;
+    Values::const_iterator it;
+
+    std::vector<int> rbMap;
+    int rbId = 0;
+    for (it = sinr.ConstValuesBegin(); it != sinr.ConstValuesEnd(); it++)
+    {
+        if (*it != 0.0)
+        {
+            rbMap.push_back(rbId);
+        }
+        rbId += 1;
+    }
+
+    mcs = 0;
+    Ptr<NrErrorModelOutput> output;
+
+    while (mcs <= m_errorModel->GetMaxMcs())
+    {
+        output = m_errorModel->GetTbDecodificationStats(sinr,
+                                                        rbMap,
+                                                        CalculateTbSize(mcs, rbMap.size()),
+                                                        mcs,
+
+                                                        NrErrorModel::NrErrorModelHistory());
+        double sinr_eff = Get_SinrEff(sinr, rbMap, mcs, 0, rbMap.size());
+        double sinr_eff_db = 10 * log10(sinr_eff);
+
+        double blerTarget;
+
+        if (sinr_eff_db <= 10)
+        {
+            blerTarget = 0.3*exp(-0.08*sinr_eff_db);
+            NS_LOG_DEBUG("Para el SINReff " << sinr_eff_db << " [dB], se tiene exp_blerTarget = " << blerTarget);
+        }
+        else
+        {
+            blerTarget = m_blerTarget;
+        }
+        
+
+        if (output->m_tbler > blerTarget)
         {
             break;
         }
