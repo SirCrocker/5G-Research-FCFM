@@ -114,7 +114,7 @@ int main(int argc, char* argv[]) {
     uint16_t gNbD = 80;     // Distance between gNb
 
     // UE Info and position
-    uint16_t ueNumPergNb = 2;   // Numbers of User per RB
+    uint16_t ueNumPergNb = 1;   // Numbers of User per RB
     // double ueDistance = .50;    //Distance between UE
     // double xUE=30;  //Initial X Position UE
     // double yUE=10;  //Initial Y Position UE
@@ -163,7 +163,7 @@ int main(int argc, char* argv[]) {
     cmd.AddValue("stepFrequency", "Time between activations of Probe CQI in s", stepFrequency);
     cmd.AddValue("addNoise", "Add normal distributed noise to the simulation", addNoise);
     cmd.AddValue("blerTarget", "Set the bler target for the AMC (Default: 0.1)", blerTarget);
-    cmd.AddValue("amcAlgo", "Choose the algorithm to be used in the amc possible values:\n\t0:Original\n\t1:ProbeCqi\n\t2:NewBlerTarget\n\t3:ExpBlerTarget\nCurrent value: ", amcAlgorithm);
+    cmd.AddValue("amcAlgo", "Choose the algorithm to be used in the amc possible values:\n\t0:Original\n\t1:ProbeCqi\n\t2:NewBlerTarget\n\t3:ExpBlerTarget\n\t4:HybridBlerTarget\nCurrent value: ", amcAlgorithm);
     cmd.AddValue("phyDistro", "Physical distribution of the Buildings-UEs-gNbs. Options:\n\t0:Default\n\t1:Trees\n\t2:Indoor Router\nCurrent value: ", phyDistro);   
 
     cmd.Parse(argc, argv);
@@ -183,6 +183,7 @@ int main(int argc, char* argv[]) {
     if (logging)
     {
         LogComponentEnableAll(LOG_PREFIX_TIME);
+        LogComponentEnable("NrAmc", LOG_DEBUG);
         // LogComponentEnable("NrAmc", LOG_ALL);
         // LogComponentEnable("BuildingsChannelConditionModel", LOG_ALL);
         // LogComponentEnable("NrBearerStatsConnector", LOG_ALL);
@@ -273,6 +274,11 @@ int main(int argc, char* argv[]) {
     * Define positions, mobility types and speed of UE and gNB.
     ********************************************************************************************************************/
     #pragma region UE_gNB   
+
+    if (phyDistro == (int)PhysicalDistributionOptions::IND_ROUTER)
+    {
+        ueNumPergNb = 2;
+    }
 
     NodeContainer gnbNodes;
     NodeContainer ueNodes;
