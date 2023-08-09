@@ -266,6 +266,7 @@ TreePhysicalDistribution(ns3::NodeContainer& gnbNodes, ns3::NodeContainer& ueNod
         std::cout << "gNb: " << u << "\t" << "(" << gNbX << "," << gNbY+gNbD*u <<")" << std::endl;
         gnbPositionAlloc->Add(Vector(gNbX, gNbY+gNbD*u, hBS));
     }
+
     MobilityHelper enbmobility;
     enbmobility.SetMobilityModel("ns3::ConstantPositionMobilityModel");
     enbmobility.SetPositionAllocator(gnbPositionAlloc);
@@ -419,6 +420,7 @@ IndoorRouterPhysicalDistribution(ns3::NodeContainer& gnbNodes, ns3::NodeContaine
         std::cout << "gNb: " << u << "\t" << "(" << gNbX << "," << gNbY+gNbD*u <<")" << std::endl;
         gnbPositionAlloc->Add(Vector(gNbX, gNbY+gNbD*u, hBS));
     }
+
     MobilityHelper enbmobility;
     enbmobility.SetMobilityModel("ns3::ConstantPositionMobilityModel");
     enbmobility.SetPositionAllocator(gnbPositionAlloc);
@@ -430,10 +432,13 @@ IndoorRouterPhysicalDistribution(ns3::NodeContainer& gnbNodes, ns3::NodeContaine
     uemobility.Install(ueNodes);
  
     // Set Initial Position of UE
+    // 2 UES first in floor 3, second on floor 8
     for (uint32_t u = 0; u < ueNodes.GetN(); ++u)
     {
-        std::cout << "UE: " << u << "\t" << "Pos: "<<"(" << xUE << "," << yUE << "," << hUE + u * floorHeight << ")" << "\tFloor: " << u + UEfloor << "\t" << "Speed: (" << speed << ", 0)" <<std::endl;
-        ueNodes.Get(u)->GetObject<MobilityModel>()->SetPosition(Vector((float)xUE, (float) yUE, hUE + u * floorHeight)); // (x, y, z) in m
+        double floorForUe = u * 5 + UEfloor;
+        double zUe = hUE + u * 5 * floorHeight;
+        std::cout << "UE: " << u << "\t" << "Pos: "<<"(" << xUE << "," << yUE << "," << zUe << ")" << "\tFloor: " << floorForUe << "\t" << "Speed: (" << speed << ", 0)" <<std::endl;
+        ueNodes.Get(u)->GetObject<MobilityModel>()->SetPosition(Vector((float)xUE, (float) yUE, zUe)); // (x, y, z) in m
         ueNodes.Get(u)->GetObject<ConstantVelocityMobilityModel>()->SetVelocity(Vector( speed, 0,  0)); // move UE1 along the x axis
     }
 
