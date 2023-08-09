@@ -103,6 +103,7 @@ else:
 # Default values for matplotlib
 plt.rc('lines', linewidth=2)
 
+
 # ----------------------------------------------------------
 # Mobility
 # ----------------------------------------------------------
@@ -125,9 +126,10 @@ def graphMobility():
     buildingList = phyData["Buildings"]
     gnbList = phyData["gnb"]
 
-    mob = pd.read_csv(HOMEPATH + mobFilepath, sep = "\t")
+    mob = pd.read_csv(HOMEPATH + mobFilepath, sep="\t")
     mob.set_index('Time', inplace=True)
-    ax1 = mob.plot.scatter( x='x',y='y', ax=ax, title=title, s=5, zorder=5, color="firebrick")
+    ax1 = mob.plot.scatter(x='x', y='y', ax=ax, title=title, s=5, zorder=5,
+                           color="firebrick", marker='_')
     
     for gnb in gnbList:
         gnbAnnBox = AnnotationBbox(gnbBox, [gnb["x"], gnb["y"] + 5], frameon=False)
