@@ -12,7 +12,6 @@ tic=$(date +%s)
 # Default values
 serverType='Edge'
 tcpTypeId='UDP'
-mobilityVal=0
 build_ns3=1
 pass_through=""
 custom_name=""
@@ -21,10 +20,9 @@ open_folder=0
 helpFunction()
 {
    echo ""
-   echo "Usage: $0 -t $tcpTypeId -s $serverType -m -b -o -p \"--arg=val\""
+   echo "Usage: $0 -t $tcpTypeId -s $serverType -b -o -p \"--arg=val\""
    echo -e "\t-t 'TcpNewReno' or 'TcpBbr' or 'TcpCubic' or 'TcpHighSpeed' or 'TcpBic' or 'TcpLinuxReno' or 'UDP'"
    echo -e "\t-s 'Remote' or 'Edge'"
-   echo -e "\t-m Activates mobility of the UE(s)"
    echo -e "\t-b Skips the build step of ns3, it always builds by default"
    echo -e "\t-p Pass through commands to the simulation, args must be inside quotes \"--arg=value\""
    echo -e "\t-c Custom folder name for the simulation data"
@@ -32,12 +30,11 @@ helpFunction()
    exit 1 # Exit script after printing help
 }
 
-while getopts "t:r:s:mbp:c:o" opt
+while getopts "t:r:s:bp:c:o" opt
 do
    case "$opt" in
       t ) tcpTypeId="$OPTARG" ;;
       s ) serverType="$OPTARG" ;;
-      m ) mobilityVal=1 ;;
       b ) build_ns3=0 ;;
       p ) pass_through="$OPTARG" ;;
       c ) custom_name="$OPTARG" ;;
@@ -50,12 +47,6 @@ done
 if [ "$serverType" != "Remote" ] && [ "$serverType" != "Edge" ]
 then
    echo "ServerType \"$serverType\" not available";
-   helpFunction
-fi
-
-if [ "$mobilityVal" != "0" ] && [ "$mobilityVal" != "1" ]
-then
-   echo "mobilityVal \"$mobilityVal\" not available";
    helpFunction
 fi
 
@@ -122,7 +113,7 @@ else
 fi
 
 echo
-printf "Argument values... \n tcpTypeId: ${magenta}${tcpTypeId}${clear}\tServer: ${green}${serverType}${clear}\t Mobility: ${mobilityVal}\n"
+printf "Argument values... \n tcpTypeId: ${magenta}${tcpTypeId}${clear}\tServer: ${green}${serverType}${clear}\n"
 printf "Destination Folder: ${blue}${bkfolder}${clear}\n"
 echo
 
@@ -137,7 +128,6 @@ cp "${RUTA_PROBE}/graph.py" $outfolder/$bkfolder/$backupfolder/graph.py.txt
     --flowType=$flowType
     --tcpTypeId=$tcpTypeId
     --serverType=$serverType
-    --mobility=$mobilityVal
    $pass_through
     " --cwd "$outfolder/$bkfolder" --no-build
 
