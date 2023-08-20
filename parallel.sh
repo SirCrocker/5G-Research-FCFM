@@ -32,8 +32,8 @@ helpFunction()
 {
    echo ""
    echo "Usage: $0 -m $montecarlo -c $custom_name -r -b"
-   echo -e "\t-m Number of montecarlo iterations"
-   echo -e "\t-c Custom folder name for the folder with the differnet simulations, the word \"PAR-\" will be prefixed"
+   echo -e "\t-m Number of montecarlo iterations [default: ${montecarlo}]"
+   echo -e "\t-c Custom folder name for the folder with the different simulations, the word \"PAR-\" will be prefixed"
    echo -e "\t-r Flag that sets that a random run is NOT used so results ARE deterministic"
    echo -e "\t-b Skips the build step of ns3, it always build by default"
    exit 1 # Exit script after printing help
@@ -109,5 +109,5 @@ done
 jobs
 wait
 
-printf "${cyan}Running Graph script...${clear}"
+printf "${cyan}Running Graph script...${clear}\n"
 python3 "${RUTA_PROBE}/graph_parallel.py" "$RUTA_PROBE/out/$batch_dir_name"
