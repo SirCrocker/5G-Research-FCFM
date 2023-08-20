@@ -131,17 +131,18 @@ cp "${RUTA_PROBE}/graph.py" $outfolder/$bkfolder/$backupfolder/graph.py.txt
    $pass_through
     " --cwd "$outfolder/$bkfolder" --no-build
 
-   exit_status=$?
-   if [ "$exit_status" != "0" ]; then
-      printf "${red}Error ${exit_status} while simulating, simulation cancelled! ${clear}\n"
-      echo "Graphs and post-processing scripts were not run."
-      exit $exit_status
-   fi
+exit_status=$?
 
 echo
 printf "Running... Packet Error Rate Script\n"
 echo
 sh "${RUTA_PROBE}/packet-error-rate.sh" $outfolder/$bkfolder
+
+if [ "$exit_status" != "0" ]; then
+   printf "${red}Error ${exit_status} while simulating, simulation cancelled! ${clear}\n"
+   echo "Graphs scripts were not run."
+   exit $exit_status
+fi
 
 echo
 printf "Running... Graph Script\n"
