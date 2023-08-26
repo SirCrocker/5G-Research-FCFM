@@ -3,14 +3,22 @@ import sys
 import numpy as np
 import pandas as pd
 import configparser
+import seaborn as sns
 import matplotlib.pyplot as plt
 from OtherScripts.simutil import *
+from typing import TypedDict, List
 
 # TODO: ALL FOLDERS MUST BE OF THE SAME TYPE OF SIMULATION FIX THAT
 # TODO: THE RESULT IS SAVED INSIDE THE OUT FOLDER (MAYBE FIX)
 # TODO: CHECK IF CODE IS NOT TOO MESSY
 
 PATH = ""
+
+
+class LabelsNdf(TypedDict):
+    data: pd.DataFrame
+    labels: str
+    scene: str
 
 
 def search_outputs_folder(directory):
@@ -118,16 +126,63 @@ def data_from_file_to_dict(filename: str) -> dict:
     return dicts_with_df
 
 
+def separate_by_scenario(data: LabelsNdf) -> List[LabelsNdf]:
+    # Create a dict with possible labels
+    scenarios = {}
+    for pos, label in enumerate(data["labels"]):
+        specs = [label[2*x:2*x+2] for x in range(len(label)//2)]
+
+        for spec in specs:
+            if "S" in spec:
+                if spec not in scenarios.keys():
+                    scenarios[spec] = {"labels": [], "data": [], "scene": []}
+
+                scenarios[spec]["labels"].append(label.replace(spec, ""))
+                scenarios[spec]["data"].append(data["data"][pos])
+                scenarios[spec]["scene"] = spec
+
+    return list(scenarios.values())
+
+
 @info_n_time_decorator("Throughput Violin", True)
 def violinGraphThr(data):
 
-    plt.violinplot(data["data"], showmeans=True, showextrema=True)
-    plt.suptitle("Comparison of throughput showing the mean")
-    plt.title("Combination of Algorithms-Scenarios.")
-    plt.xlabel("Algorithm-Scenario")
-    plt.ylabel("Throughput [Mb/s]")
-    plt.xticks(np.arange(1, len(data["labels"])+1), labels=data["labels"])
-    plt.savefig(os.path.join(PATH, "Thr-Violin-Par.png"), dpi=300)
+    data = separate_by_scenario(data)
+    n_cols = len(data)
+
+    fig, axes = plt.subplots(1, n_cols)
+
+    axes[0].set_ylabel("Throughput [Mb/s]")
+    for pos, ax in enumerate(axes):
+        max_len = len(sorted(data[pos]["data"], key=lambda x: len(x))[-1])
+
+        thrs = []
+        for thr in data[pos]["data"]:
+            if len(thr) < max_len:
+                thr = thr + [np.nan] * (max_len - len(thr))
+            thrs.append(thr)
+
+        vals = np.array(thrs, dtype=float).T
+        df = pd.DataFrame(data=vals, columns=data[pos]["labels"])
+
+        sns.violinplot(data=df, ax=ax, cut=0, inner=None)
+        sns.pointplot(data=df, estimator=np.mean, color="black", ax=ax,
+                      linestyles="--", errorbar=None, scale=0.5, label="Mean")
+
+        # Add text on top of the pointplots
+        for p in zip(ax.get_xticks(),
+                     np.round(np.nanmean(vals, axis=0), decimals=1)):
+            # Distance from pointplot
+            weight = 1.032 if p[1] > 50 else 1.25
+            ax.text(p[0], p[1]*weight, p[1], color='black', ha='center',
+                    bbox=dict(facecolor='white', alpha=0.4, boxstyle="round"))
+
+        ax.set_title(data[pos]["scene"].replace("S", "Scenario "))
+        ax.set_xlabel("Algorithm")
+        ax.legend()
+
+    fig.suptitle("Distribution of Throughput by Algorithm-Scenario")
+    fig.savefig(os.path.join(PATH, "Thr-Violin-Par.png"), dpi=300)
     plt.close()
 
     return True
@@ -136,13 +191,42 @@ def violinGraphThr(data):
 @info_n_time_decorator("Delay Violin", debug=True)
 def violinGraphDelay(data):
 
-    plt.violinplot(data["data"], showmeans=True)
-    plt.suptitle("Comparison of Delay showing the mean")
-    plt.title("Combination of Algorithms-Scenarios.")
-    plt.xlabel("Algorithm-Scenario")
-    plt.ylabel("Delay [ms]")
-    plt.xticks(np.arange(1, len(data["labels"])+1), labels=data["labels"])
-    plt.savefig(os.path.join(PATH, "Delay-Violin-Par.png"), dpi=300)
+    data = separate_by_scenario(data)
+    n_cols = len(data)
+
+    fig, axes = plt.subplots(1, n_cols)
+
+    axes[0].set_ylabel("Delay [ms]")
+    for pos, ax in enumerate(axes):
+        max_len = len(sorted(data[pos]["data"], key=lambda x: len(x))[-1])
+
+        thrs = []
+        for thr in data[pos]["data"]:
+            if len(thr) < max_len:
+                thr = thr + [np.nan] * (max_len - len(thr))
+            thrs.append(thr)
+
+        vals = np.array(thrs, dtype=float).T
+        df = pd.DataFrame(data=vals, columns=data[pos]["labels"])
+
+        sns.violinplot(data=df, ax=ax, cut=0, inner=None)
+        sns.pointplot(data=df, estimator=np.mean, color="black", ax=ax,
+                      linestyles="--", errorbar=None, scale=0.5, label="Mean")
+
+        # Add text on top of the pointplots
+        for p in zip(ax.get_xticks(),
+                     np.round(np.nanmean(vals, axis=0), decimals=1)):
+            # Distance from pointplot
+            weight = 1.11 if p[1] > 50 else 1.045
+            ax.text(p[0], p[1]*weight, p[1], color='black', ha='center',
+                    bbox=dict(facecolor='white', alpha=0.4, boxstyle="round"))
+
+        ax.set_title(data[pos]["scene"].replace("S", "Scenario "))
+        ax.set_xlabel("Algorithm")
+        ax.legend()
+
+    fig.suptitle("Distribution of Delay by Algorithm-Scenario")
+    fig.savefig(os.path.join(PATH, "Delay-Violin-Par.png"), dpi=300)
     plt.close()
 
     return True
@@ -153,7 +237,9 @@ def stackedbar_graph_rtx():
     data_dict = data_from_file_to_dict('RxPacketTrace.txt')
 
     RTX_OPTIONS = pd.Series(0, index=range(-1, 4), dtype=np.float64)
+
     for i, df in enumerate(data_dict["data"]):
+        df.reset_index(drop=True, inplace=True)
         df["rtxNum"] = df.loc[df['direction'] == 'DL', "rv"]
         df.loc[(df["rv"] == 3) &
                (df["corrupt"] == 1) &
@@ -165,24 +251,27 @@ def stackedbar_graph_rtx():
         data_dict["data"][i] = RTX_OPTIONS.add(to_add, fill_value=0).to_list()
 
     colors = ["#BE0000", "#019875", "#72CC50", "#BFD834", "#00AEAD"]
-    bottom = np.zeros(len(data_dict["labels"]))
 
-    for i, nrtx in enumerate(["Failed", "No rtx", "1 rtx", "2 rtx", "3 rtx"]):
-        values = np.array([x[i] for x in data_dict["data"]])
-        plt.bar(data_dict["labels"], values, 0.69, label=nrtx,
-                bottom=bottom, color=colors[i])
-        bottom += values
+    data = separate_by_scenario(data_dict)
+    n_cols = len(data)
+    fig, axes = plt.subplots(1, n_cols)
 
-    # plt.violinplot(data_dict["data"], showextrema=True)
-    plt.suptitle("Percentage of successful and failed blocks transmission")
-    plt.title("with number of retransmissions needed, in PHY layer")
-    plt.xlabel("Algorithm-Scenario")
-    plt.ylabel("Percentage of blocks sent")
-    plt.legend()
-    # plt.yticks([-1, 0, 1, 2, 3])
-    # plt.xticks(np.arange(1, len(data_dict["labels"])+1),
-    #            labels=data_dict["labels"])
-    plt.savefig(os.path.join(PATH, "Rtx-Violin-Par.png"), dpi=300)
+    axes[0].set_ylabel("Percentage of sent blocks [%]")
+    for pos, ax in enumerate(axes):
+        bottom = np.zeros(len(data[pos]["labels"]))
+
+        for i, nrtx in enumerate(["Failed", "No rtx",
+                                  "1 rtx", "2 rtx", "3 rtx"]):
+            values = np.array([x[i] for x in data[pos]["data"]])
+            ax.bar(data[pos]["labels"], values, 0.69, label=nrtx,
+                   bottom=bottom, color=colors[i])
+            bottom += values
+        ax.set_title(data[pos]["scene"].replace("S", "Scenario "))
+        ax.set_xlabel("Algorithm")
+        ax.legend()
+
+    fig.suptitle("Percentage of successful and failed blocks transmission")
+    fig.savefig(os.path.join(PATH, "Rtx-Bar-Par.png"), dpi=300)
     plt.close()
 
     return True
@@ -196,15 +285,35 @@ def violin_graph_bler():
         data_dict["data"][i] = df.loc[(df["direction"] == "DL"), "TBler"]\
                                  .to_list()
 
-    plt.violinplot(data_dict["data"], showmeans=True)
-    plt.suptitle("Comparison of accumulated BLER showing the mean")
-    plt.title("Combination of Algorithms-Scenarios.")
-    plt.xlabel("Algorithm-Scenario")
-    plt.ylabel("BLER")
-    plt.yscale("log")
-    plt.xticks(np.arange(1, len(data_dict["labels"])+1),
-               labels=data_dict["labels"])
-    plt.savefig(os.path.join(PATH, "BLER-Violin-Par.png"), dpi=300)
+    data = separate_by_scenario(data_dict)
+    n_cols = len(data)
+
+    fig, axes = plt.subplots(1, n_cols)
+
+    axes[0].set_ylabel("BLER")
+    for pos, ax in enumerate(axes):
+        max_len = len(sorted(data[pos]["data"], key=lambda x: len(x))[-1])
+
+        thrs = []
+        for thr in data[pos]["data"]:
+            if len(thr) < max_len:
+                thr = thr + [np.nan] * (max_len - len(thr))
+            thrs.append(thr)
+
+        vals = np.array(thrs, dtype=float).T
+        df = pd.DataFrame(data=vals, columns=data[pos]["labels"])
+
+        ax.grid(zorder=0)
+        sns.violinplot(data=df, ax=ax, cut=0, inner=None)
+        sns.pointplot(data=df, estimator=np.mean, color="black", ax=ax,
+                      linestyles="--", errorbar=None, scale=.5, label="Mean")
+        ax.set_title(data[pos]["scene"].replace("S", "Scenario "))
+        ax.set_xlabel("Algorithm")
+        ax.set_yscale("log")
+        ax.legend()
+
+    fig.suptitle("Distribution of BLER by Algorithm-Scenario")
+    fig.savefig(os.path.join(PATH, "BLER-Violin-Par.png"), dpi=300)
     plt.close()
 
     return True
