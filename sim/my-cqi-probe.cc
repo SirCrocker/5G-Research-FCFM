@@ -652,6 +652,23 @@ int main(int argc, char* argv[]) {
     monitor->SetAttribute("JitterBinWidth", DoubleValue(0.001));
     monitor->SetAttribute("PacketSizeBinWidth", DoubleValue(20));
 
+    // /* REM HELPER, uncomment for use  */
+    // Ptr<NrRadioEnvironmentMapHelper> remHelper = CreateObject<NrRadioEnvironmentMapHelper>();
+    // remHelper->SetMinX(0);
+    // remHelper->SetMaxX(40);
+    // remHelper->SetResX(40);
+    // remHelper->SetMinY(0);
+    // remHelper->SetMaxY(170);
+    // remHelper->SetResY(170);
+    // if (phyDistro == 1)
+    //     remHelper->SetZ(1.5);
+    // else if (phyDistro == 2)
+    //     remHelper->SetZ(25.5);
+    // remHelper->SetSimTag("rem");
+
+    // remHelper->SetRemMode(NrRadioEnvironmentMapHelper::COVERAGE_AREA);
+    // remHelper->CreateRem(enbNetDev.Get(0), ueNetDev.Get(0), 0);
+
     Simulator::Stop(Seconds(simTime));
     Simulator::Run();
 
