@@ -1,7 +1,8 @@
 import numpy as np
+import seaborn as sns
 import matplotlib.pyplot as plt
 from matplotlib.cbook import get_sample_data
-from matplotlib.offsetbox import AnnotationBbox,OffsetImage
+from matplotlib.offsetbox import AnnotationBbox, OffsetImage
 from matplotlib.patches import Rectangle as pltRectangle
 import pandas as pd
 import sys
@@ -699,7 +700,7 @@ def graphUdpDelay():
 # ----------------------------------------------------------
 # Retransmission | Both
 # ----------------------------------------------------------
-@info_n_time_decorator("RTX", True)
+@info_n_time_decorator("RTX")
 def graphRetransmissions():
     
     filepath = HOMEPATH + "RxPacketTrace.txt"
@@ -1024,6 +1025,33 @@ def graphPhyThroughput():
 
     return True
 
+
+# ----------------------------------------------------------
+# SINR Heatmap | Both
+# ----------------------------------------------------------
+@info_n_time_decorator("SINR Heatmap")
+def graphSinrHeatmap():
+    
+    filepath = HOMEPATH + "nr-rem-rem.out"
+    df = pd.read_csv(filepath, sep="\t", index_col=False,
+                     names=["X", "Y", "Z", "SNR", "SINR", "IPSD", "SIR"])
+    
+    fig, ax = plt.subplots(1, 1)
+
+    sns.heatmap(data=df.pivot_table(index="Y", columns="X", values="SINR"),
+                ax=ax, cmap="magma", vmin=df["SINR"].min(),
+                vmax=df['SINR'].max(), center=10, xticklabels=10, 
+                yticklabels=10)
+    ax.invert_yaxis()
+    ax.set_xlabel("Distance [m]")
+    ax.set_ylabel("Distance [m]")
+    ax.set_title(f"SINR Heatmap of the physical distribution at " 
+                 f"z={df['Z'].min()}m")
+    fig.savefig(HOMEPATH + SIM_PREFIX + "heatmap.png", dpi=300)
+    plt.close()
+
+    return True
+
 #   | * ---- * ---- * ---- * |
 #   |  Call graph functions  |
 #   | * ---- * ---- * ---- * |
@@ -1041,6 +1069,7 @@ if __name__ == "__main__":
     # graphPhyThroughput()
     graphRlcBuffers()
     graphRetransmissions()
+    graphSinrHeatmap()
 
     # For TCP only
     if flowType == "TCP":
