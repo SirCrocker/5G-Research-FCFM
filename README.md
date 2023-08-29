@@ -1,4 +1,4 @@
-# ProbeCQI
+# 5G-Research-FCFM
 
 ### INFORMACIÓN
 
@@ -11,8 +11,9 @@
 #### Pasos importantes antes de simular
 
 1. Hay que duplicar el archivo `paths_default.cfg` a `paths.cfg` y cambiar el valor de la variable `RUTA_NS3` dentro del archivo a la ruta de la carpeta `ns-3-dev`  (`paths.cfg` es propio de cada instalación y se encuentra dentro del gitignore).
-2. Se debe correr el script `copy-mod-files.sh` para copiar las librerías modificadas a la instalación de ns3 (las librerías originales se eliminan, pero se pueden recuperar haciendo `git restore .` en la carpeta correspondiente).
+2. Se debe correr el script `copy-mod-files.sh` para copiar los archivos modificados a la instalación de ns3 (los archivos originales se sobreescriben, pero se pueden recuperar haciendo `git restore .` en la carpeta correspondiente).
 3. Crear la carpeta `out` dentro del directorio principal, donde se guardarán los resultados de las simulaciones.
+4. Instalar las librerías usadas por Python usando `pip install -r python_requirements.txt`.
 
 #### Requerimientos Python
 
@@ -22,6 +23,7 @@ Python se utiliza en la generación de gráficos y en el análisis de algunos da
 - Pandas
 - matplotlib
 - numpy
+- seaborn
 
 #### Como simular
 
