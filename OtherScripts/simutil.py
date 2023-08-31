@@ -4,21 +4,22 @@ import functools
 import time
 
 # Set text colors
-CLEAR='\033[0m'
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[0;33m'
-BLUE='\033[0;34m'
-MAGENTA='\033[0;35m'
-CYAN='\033[0;36m'
+CLEAR = '\033[0m'
+RED = '\033[0;31m'
+GREEN = '\033[0;32m'
+YELLOW = '\033[0;33m'
+BLUE = '\033[0;34m'
+MAGENTA = '\033[0;35m'
+CYAN = '\033[0;36m'
 
 # Set Background colors
-BG_RED='\033[0;41m'
-BG_GREEN='\033[0;42m'
-BG_YELLOW='\033[0;43m'
-BG_BLUE='\033[0;44m'
-BG_MAGENTA='\033[0;45m'
-BG_CYAN='\033[0;46m'
+BG_RED = '\033[0;41m'
+BG_GREEN = '\033[0;42m'
+BG_YELLOW = '\033[0;43m'
+BG_BLUE = '\033[0;44m'
+BG_MAGENTA = '\033[0;45m'
+BG_CYAN = '\033[0;46m'
+
 
 # Error for the number of arguments
 class ArgumentError(BaseException):
@@ -26,7 +27,7 @@ class ArgumentError(BaseException):
 
 # ----------------------------------------------------------
 # Decorator for time
-# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # It calculates the time it takes to execute the function
 # and prints its name (that must be passed as an argument)
 # and the time it took to execute.
@@ -45,25 +46,27 @@ def info_n_time_decorator(name, debug=False):
     def actual_decorator(func):
         @functools.wraps(func)
         def wrapper(*args, **kwargs):
-            
-            print(CYAN + name + CLEAR, end="...", flush=True)
-            tic=time.time()
 
+            print(CYAN + name + CLEAR, end="...", flush=True)
+            tic = time.time()
+
+            func_ret = False
             try:
                 func_ret = func(*args, **kwargs)
+            except KeyboardInterrupt:
+                print(f"{RED}User canceled.{CLEAR}", end="")
             except Exception as e:
                 if debug:
                     print(f"Exception thrown: {e}")
-                func_ret = False
             finally:
                 plt.close()
 
             if func_ret:
                 toc = time.time()
-                print(f"\tProcessed in: %.2f" %(toc-tic))
+                print(f"\tProcessed in: %.2f" % (toc-tic))
             else:
                 print(RED + "\tError while processing. Skipped." + CLEAR)
-        
+
         return wrapper
     return actual_decorator
 
@@ -71,7 +74,7 @@ def info_n_time_decorator(name, debug=False):
 # in the simulation.
 @info_n_time_decorator("UDP Loss")
 def checkUdpLoss(homepath: str, noisePresent):
-    
+
     # In this test we only have 1 UE, with NodeId=1
     filepath = homepath + "UdpRecv_Node1.txt"
     df = pd.read_csv(filepath, sep="\t")
