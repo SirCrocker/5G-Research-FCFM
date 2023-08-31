@@ -137,7 +137,8 @@ def separate_by_scenario(data: LabelsNdf) -> List[LabelsNdf]:
                 if spec not in scenarios.keys():
                     scenarios[spec] = {"labels": [], "data": [], "scene": []}
 
-                scenarios[spec]["labels"].append(label.replace(spec, ""))
+                scenarios[spec]["labels"].append(label.replace(spec, "")
+                                                      .replace("A0", "A1"))  # >Cochinada por ahora, arreglar en simulación después !!
                 scenarios[spec]["data"].append(data["data"][pos])
                 scenarios[spec]["scene"] = spec
 
@@ -153,6 +154,8 @@ def violinGraphThr(data):
     fig, axes = plt.subplots(1, n_cols)
 
     axes[0].set_ylabel("Throughput [Mb/s]")
+    # palettes = [sns.color_palette("Set1")[:4], sns.color_palette("Set1")[4:]]
+    palettes = [sns.color_palette("Set1"), sns.color_palette("Pastel1")]
     for pos, ax in enumerate(axes):
         max_len = len(sorted(data[pos]["data"], key=lambda x: len(x))[-1])
 
@@ -165,7 +168,7 @@ def violinGraphThr(data):
         vals = np.array(thrs, dtype=float).T
         df = pd.DataFrame(data=vals, columns=data[pos]["labels"])
 
-        sns.violinplot(data=df, ax=ax, cut=0, inner=None)
+        sns.violinplot(data=df, ax=ax, cut=0, inner=None, palette=palettes[pos])
         sns.pointplot(data=df, estimator=np.mean, color="black", ax=ax,
                       linestyles="--", errorbar=None, scale=0.5, label="Mean")
 
@@ -176,6 +179,9 @@ def violinGraphThr(data):
             weight = 1.032 if p[1] > 50 else 1.25
             ax.text(p[0], p[1]*weight, p[1], color='black', ha='center',
                     bbox=dict(facecolor='white', alpha=0.4, boxstyle="round"))
+
+        if pos == 1:
+            ax.set_ylim([0, 65])
 
         ax.set_title(data[pos]["scene"].replace("S", "Scenario "))
         ax.set_xlabel("Algorithm")
@@ -195,7 +201,7 @@ def violinGraphDelay(data):
     n_cols = len(data)
 
     fig, axes = plt.subplots(1, n_cols)
-
+    palettes = [sns.color_palette("Set1"), sns.color_palette("Pastel1")]
     axes[0].set_ylabel("Delay [ms]")
     for pos, ax in enumerate(axes):
         max_len = len(sorted(data[pos]["data"], key=lambda x: len(x))[-1])
@@ -208,8 +214,10 @@ def violinGraphDelay(data):
 
         vals = np.array(thrs, dtype=float).T
         df = pd.DataFrame(data=vals, columns=data[pos]["labels"])
+        df.replace(0, np.nan, inplace=True)
+        df.to_csv("DelayDf.txt", sep="\t", encoding="utf-8")
 
-        sns.violinplot(data=df, ax=ax, cut=0, inner=None)
+        sns.violinplot(data=df, ax=ax, cut=0, inner=None, palette=palettes[pos])
         sns.pointplot(data=df, estimator=np.mean, color="black", ax=ax,
                       linestyles="--", errorbar=None, scale=0.5, label="Mean")
 
@@ -220,6 +228,11 @@ def violinGraphDelay(data):
             weight = 1.11 if p[1] > 50 else 1.045
             ax.text(p[0], p[1]*weight, p[1], color='black', ha='center',
                     bbox=dict(facecolor='white', alpha=0.4, boxstyle="round"))
+
+        if pos == 0:
+            ax.set_ylim([0, 20])
+        if pos == 1:
+            ax.set_ylim([0, 400])
 
         ax.set_title(data[pos]["scene"].replace("S", "Scenario "))
         ax.set_xlabel("Algorithm")
@@ -260,8 +273,8 @@ def stackedbar_graph_rtx():
     for pos, ax in enumerate(axes):
         bottom = np.zeros(len(data[pos]["labels"]))
 
-        for i, nrtx in enumerate(["Failed", "No rtx",
-                                  "1 rtx", "2 rtx", "3 rtx"]):
+        for i, nrtx in enumerate(["Failed", "No Re-TX",
+                                  "1 Re-TX", "2 Re-TX", "3 Re-TX"]):
             values = np.array([x[i] for x in data[pos]["data"]])
             ax.bar(data[pos]["labels"], values, 0.69, label=nrtx,
                    bottom=bottom, color=colors[i])
