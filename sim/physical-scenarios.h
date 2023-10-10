@@ -12,7 +12,8 @@ using namespace ns3;
     enum PhysicalDistributionOptions {
         DEFAULT,
         TREES,
-        IND_ROUTER
+        IND_ROUTER,
+        NEIGHBORHOOD
     };
     
     /**
@@ -75,3 +76,31 @@ using namespace ns3;
     */
     void IndoorRouterPhysicalDistribution(ns3::NodeContainer& gnbNodes, ns3::NodeContainer& ueNodes);
 
+    /**
+     * Neighborhood, it is a row of trees in the sidewalk with one or more UEs that move in the same path and other UE into their houses
+     * - Street Width: 14 meters
+     * - Sidewalk Width: 3 meters
+     * - Frontyard: 5 meters 
+     * - Distance between trees: 10 meters (x axis)
+     * - Each tree is modeled as a wood building of x*y m^2 with no internal apartments
+     * - Tree height is 7 meters
+     * 
+     *     ----------------------------------------
+     *                                                Sidewalk
+     *     |T|   |T|    Antenna    |T|   |T|   |T|
+     *     ----------------------------------------
+     *
+     *                  Street
+     *
+     *     ----------------------------------------
+     *     |T|   |T|   |T|   |T|   |T|   |T|   |T|    <- trees
+     *     UE --> .  .  .  .  .  .  .  .  .  .  .     Sidewalk
+     *     ----------------------------------------
+     *               |                 |    
+     *               |                 |    
+     *     _______   |     _______     |    _______ 
+     *    | house |  |    | house |    |   | house |
+     *    |   UE  |  |    |   UE  |    |   |   UE  |
+     * 
+    */
+    void NeighborhoodPhysicalDistribution(ns3::NodeContainer& gnbNodes, ns3::NodeContainer& ueNodes);

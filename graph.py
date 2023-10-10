@@ -142,7 +142,7 @@ def graphMobility():
         #       a building type, the idea is that the image is automatically chosen
         #       depending on the type. Maybe Inherit building class and create new models?
 
-        if phyData["istree"]:
+        if phyData["istree"] or bld["ExternalWallsType"] == 0:
             bldIcon = plt.imread(get_sample_data(f'{MAINPROBE}/images/tree.png'))
             bldBox = OffsetImage(bldIcon, zoom=0.03)
             bldAnnBox = AnnotationBbox(bldBox, [bld["xmin"], bld["ymin"]+5], frameon=False)
@@ -168,8 +168,8 @@ def graphMobility():
         UEab=AnnotationBbox(UEbox,UEPos, frameon = False, zorder=5)
         ax.add_artist(UEab)
 
-    plt.xlim([min(0, mob['x'].min()) , max(60,mob['x'].max()+10)])
-    plt.ylim([min(0, mob['y'].min()) , max(60,mob['y'].max()+10)])
+    plt.xlim([min(0, mob['x'].min()) , max(110,mob['x'].max()+10)])
+    plt.ylim([min(0, mob['y'].min()) , max(110,mob['y'].max()+10)])
     ax.set_xlabel("Distance [m]")
     ax.set_ylabel("Distance [m]")
 
