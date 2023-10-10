@@ -1,6 +1,4 @@
-# 5G-Research-FCFM
-
-### INFORMACIÓN
+# 5G Research FCFM
 
 #### Sobre la simulación
 
@@ -29,7 +27,7 @@ Python se utiliza en la generación de gráficos y en el análisis de algunos da
 
 ##### Simulación simple (única realización)
 
-To-Do
+Llamar al script
 
 ##### Múltiples simulaciones (en paralelo)
 

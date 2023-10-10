@@ -165,8 +165,11 @@ def violinGraphThr(data):
                 thr = thr + [np.nan] * (max_len - len(thr))
             thrs.append(thr)
 
+        dii = dict(A1=r"$BLER_{10\%}$", A2=r"$BLER_{30\%}$",
+                   A3=r"$BLER_{dyn}$", A4=r"$BLER_{hyb}$")
+        aaa = list(map(lambda x: dii[x], data[pos]["labels"]))
         vals = np.array(thrs, dtype=float).T
-        df = pd.DataFrame(data=vals, columns=data[pos]["labels"])
+        df = pd.DataFrame(data=vals, columns=aaa)
 
         sns.violinplot(data=df, ax=ax, cut=0, inner=None, palette=palettes[pos])
         sns.pointplot(data=df, estimator=np.mean, color="black", ax=ax,
@@ -186,6 +189,7 @@ def violinGraphThr(data):
         ax.set_title(data[pos]["scene"].replace("S", "Scenario "))
         ax.set_xlabel("Algorithm")
         ax.legend()
+        ax.set_xticks(ticks=range(4), labels=aaa, rotation=5, fontsize=9.2)
 
     fig.suptitle("Distribution of Throughput by Algorithm-Scenario")
     fig.savefig(os.path.join(PATH, "Thr-Violin-Par.png"), dpi=300)
@@ -212,10 +216,14 @@ def violinGraphDelay(data):
                 thr = thr + [np.nan] * (max_len - len(thr))
             thrs.append(thr)
 
+        dii = dict(A1=r"$BLER_{10\%}$", A2=r"$BLER_{30\%}$",
+                   A3=r"$BLER_{dyn}$", A4=r"$BLER_{hyb}$")
+        aaa = list(map(lambda x: dii[x], data[pos]["labels"]))
+
         vals = np.array(thrs, dtype=float).T
-        df = pd.DataFrame(data=vals, columns=data[pos]["labels"])
+        df = pd.DataFrame(data=vals, columns=aaa)
         df.replace(0, np.nan, inplace=True)
-        df.to_csv("DelayDf.txt", sep="\t", encoding="utf-8")
+        # df.to_csv("DelayDf.txt", sep="\t", encoding="utf-8")
 
         sns.violinplot(data=df, ax=ax, cut=0, inner=None, palette=palettes[pos])
         sns.pointplot(data=df, estimator=np.mean, color="black", ax=ax,
@@ -238,7 +246,8 @@ def violinGraphDelay(data):
         ax.set_xlabel("Algorithm")
         ax.legend()
 
-    fig.suptitle("Distribution of Delay by Algorithm-Scenario")
+        ax.set_xticks(ticks=range(4), labels=aaa, rotation=5, fontsize=9.2)
+    fig.suptitle("Distribution of Packet Delay by Algorithm-Scenario")
     fig.savefig(os.path.join(PATH, "Delay-Violin-Par.png"), dpi=300)
     plt.close()
 
@@ -273,6 +282,10 @@ def stackedbar_graph_rtx():
     for pos, ax in enumerate(axes):
         bottom = np.zeros(len(data[pos]["labels"]))
 
+        dii = dict(A1=r"$BLER_{10\%}$", A2=r"$BLER_{30\%}$",
+                   A3=r"$BLER_{dyn}$", A4=r"$BLER_{hyb}$")
+        aaa = list(map(lambda x: dii[x], data[pos]["labels"]))
+
         for i, nrtx in enumerate(["Failed", "No Re-TX",
                                   "1 Re-TX", "2 Re-TX", "3 Re-TX"]):
             values = np.array([x[i] for x in data[pos]["data"]])
@@ -282,6 +295,7 @@ def stackedbar_graph_rtx():
         ax.set_title(data[pos]["scene"].replace("S", "Scenario "))
         ax.set_xlabel("Algorithm")
         ax.legend()
+        ax.set_xticks(ticks=range(4), labels=aaa, rotation=5, fontsize=9.2)
 
     fig.suptitle("Percentage of successful and failed blocks transmission")
     fig.savefig(os.path.join(PATH, "Rtx-Bar-Par.png"), dpi=300)
