@@ -19,6 +19,7 @@ file_data=("lte-rlc-um.cc.txt" "/src/lte/model"
            "nr-amc.cc.txt" "$nr_model_dir" 
            "nr-amc.h.txt" "$nr_model_dir"
            "nr-eesm-t1.cc.txt" "$nr_model_dir"
+           "nr-mac-scheduler-lcg.cc.txt" "$nr_model_dir"
            )
 # Add more entries as needed
 
