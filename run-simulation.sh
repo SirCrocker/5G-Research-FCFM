@@ -95,12 +95,12 @@ me=`basename "$0"`
 
 if [ ! -d "$outfolder" ];
 then
-	mkdir $outfolder
+	mkdir -p $outfolder
 fi
 
 if [ ! -d "$outfolder/$bkfolder" ];
 then
-	mkdir $outfolder/$bkfolder
+	mkdir -p $outfolder/$bkfolder
 
    if [[ $oldname_path != "" ]]
    then
@@ -120,7 +120,7 @@ echo
 backupfolder="scriptsBackup"
 mkdir $outfolder/$bkfolder/$backupfolder
 cp $me $outfolder/$bkfolder/$backupfolder/$me.txt
-cp $RUTA_CC $outfolder/$bkfolder/$backupfolder/my-cqi-probe.cc.txt
+cp $RUTA_CC $outfolder/$bkfolder/$backupfolder/$FILENAME.txt
 cp "${RUTA_PROBE}/packet-error-rate.sh" $outfolder/$bkfolder/$backupfolder/packet-error-rate.sh.txt
 cp "${RUTA_PROBE}/graph.py" $outfolder/$bkfolder/$backupfolder/graph.py.txt
 

@@ -24,7 +24,7 @@
 
 /* Include custom libraries (aux files for the simulation) */
 #include "cmdline-colors.h"
-#include "cqiprobe-apps.h"
+#include "simulation-apps.h"
 #include "physical-scenarios.h"
 
 using namespace ns3;
@@ -32,7 +32,7 @@ using namespace ns3;
 /* Global Variables */
 auto tic = std::chrono::high_resolution_clock::now();       // Initial time
 auto itime = std::chrono::high_resolution_clock::now();     // Initial time 2
-double simTime = 10;            // in seconds
+double simTime = 2;            // in seconds
 
 /* Auxiliary Vars */
 const uint32_t SGW_SYS_ID = 0x2D574753;
@@ -138,8 +138,6 @@ int main(int argc, char* argv[]) {
     std::string tcpTypeId = "TcpBbr";   // TCP Type
     double AppStartTime = 0.2;          // APP start time
 
-    bool i_want_rem = false;
-
     #pragma endregion Variables
 
     /* Simulation arguments */
@@ -166,8 +164,7 @@ int main(int argc, char* argv[]) {
     cmd.AddValue("addNoise", "Add normal distributed noise to the simulation", addNoise);
     cmd.AddValue("blerTarget", "Set the bler target for the AMC (Default: 0.1)", blerTarget);
     cmd.AddValue("amcAlgo", "Choose the algorithm to be used in the amc possible values:\n\t0:Original\n\t1:ProbeCqi\n\t2:NewBlerTarget\n\t3:ExpBlerTarget\n\t4:HybridBlerTarget\nCurrent value: ", amcAlgorithm);
-    cmd.AddValue("phyDistro", "Physical distribution of the Buildings-UEs-gNbs. Options:\n\t0:Default\n\t1:Trees\n\t2:Indoor Router\n\t3:Neighbourhood\nCurrent value: ", phyDistro);
-    cmd.AddValue("remmap", "Choose if you want to create a REM map.", i_want_rem);  
+    cmd.AddValue("phyDistro", "Physical distribution of the Buildings-UEs-gNbs. Options:\n\t0:Default\n\t1:Trees\n\t2:Indoor Router\nCurrent value: ", phyDistro);   
 
     cmd.Parse(argc, argv);
 
@@ -296,10 +293,6 @@ int main(int argc, char* argv[]) {
 
     case PhysicalDistributionOptions::TREES:
         TreePhysicalDistribution(gnbNodes, ueNodes, mobility);
-        break;
-
-    case PhysicalDistributionOptions::NEIGHBORHOOD:
-        NeighborhoodPhysicalDistribution(gnbNodes, ueNodes);
         break;
 
     case PhysicalDistributionOptions::DEFAULT:
@@ -659,26 +652,22 @@ int main(int argc, char* argv[]) {
     monitor->SetAttribute("JitterBinWidth", DoubleValue(0.001));
     monitor->SetAttribute("PacketSizeBinWidth", DoubleValue(20));
 
-    /* REM HELPER */
-    Ptr<NrRadioEnvironmentMapHelper> remHelper = CreateObject<NrRadioEnvironmentMapHelper>();
-    remHelper->SetMinX(0);
-    remHelper->SetMaxX(100);
-    remHelper->SetResX(100);
-    remHelper->SetMinY(0);
-    remHelper->SetMaxY(80);
-    remHelper->SetResY(170);
-    if (phyDistro != 2)
-        remHelper->SetZ(1.5);
-    else if (phyDistro == 2)
-        remHelper->SetZ(25.5);
-    remHelper->SetSimTag("rem");
+    // /* REM HELPER, uncomment for use  */
+    // Ptr<NrRadioEnvironmentMapHelper> remHelper = CreateObject<NrRadioEnvironmentMapHelper>();
+    // remHelper->SetMinX(0);
+    // remHelper->SetMaxX(40);
+    // remHelper->SetResX(40);
+    // remHelper->SetMinY(0);
+    // remHelper->SetMaxY(170);
+    // remHelper->SetResY(170);
+    // if (phyDistro == 1)
+    //     remHelper->SetZ(1.5);
+    // else if (phyDistro == 2)
+    //     remHelper->SetZ(25.5);
+    // remHelper->SetSimTag("rem");
 
-    remHelper->SetRemMode(NrRadioEnvironmentMapHelper::COVERAGE_AREA);
-    
-    if (i_want_rem)
-    {
-        remHelper->CreateRem(enbNetDev.Get(0), ueNetDev.Get(0), 0);
-    }
+    // remHelper->SetRemMode(NrRadioEnvironmentMapHelper::COVERAGE_AREA);
+    // remHelper->CreateRem(enbNetDev.Get(0), ueNetDev.Get(0), 0);
 
     Simulator::Stop(Seconds(simTime));
     Simulator::Run();

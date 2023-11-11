@@ -3,7 +3,7 @@
 #include "ns3/internet-module.h"
 
 #include "cmdline-colors.h"
-#include "cqiprobe-apps.h"
+#include "simulation-apps.h"
 
 using namespace ns3;
 

@@ -93,8 +93,8 @@ for param in "${parameters[@]}"; do
         fi
 
         stdoutTxt=$RUTA_PROBE/out/$outdir/outputs/sim${mont_num}.txt
-        (bash "cqi-probe.sh" -b -c "$outdir/SIM${mont_num}" -p "$param2" &> $stdoutTxt; printf "Done $sim_num ${red}-${clear} Exit Status $?\n") &
-        printf "[sim:${blue}${sim_num}${clear} pid:${cyan}$!${clear}] Called ${green}cqi-probe.sh -b -c \"SIM${mont_num}\" -p ${param2} ${clear}\n"
+        (bash "run-simulation.sh" -b -c "$outdir/SIM${mont_num}" -p "$param2" &> $stdoutTxt; printf "Done $sim_num ${red}-${clear} Exit Status $?\n") &
+        printf "[sim:${blue}${sim_num}${clear} pid:${cyan}$!${clear}] Called ${green}run-simulation.sh -b -c \"SIM${mont_num}\" -p ${param2} ${clear}\n"
 
         if [ "$rem" == "$((num_cores-1))" ]; then
             jobs
