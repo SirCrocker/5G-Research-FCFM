@@ -64,6 +64,7 @@ def info_n_time_decorator(name, debug=False):
             if func_ret:
                 toc = time.time()
                 print(f"\tProcessed in: %.2f" % (toc-tic))
+                return func_ret
             else:
                 print(RED + "\tError while processing. Skipped." + CLEAR)
 
