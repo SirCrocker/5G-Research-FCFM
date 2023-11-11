@@ -276,28 +276,33 @@ def stackedbar_graph_rtx():
 
     data = separate_by_scenario(data_dict)
     n_cols = len(data)
-    fig, axes = plt.subplots(1, n_cols)
+    fig, axes = plt.subplots(1, n_cols, constrained_layout=True)
 
     axes[0].set_ylabel("Percentage of sent blocks [%]")
     for pos, ax in enumerate(axes):
         bottom = np.zeros(len(data[pos]["labels"]))
 
-        dii = dict(A1=r"$BLER_{10\%}$", A2=r"$BLER_{30\%}$",
+        xtick_translation = dict(A1=r"$BLER_{10\%}$", A2=r"$BLER_{30\%}$",
                    A3=r"$BLER_{dyn}$", A4=r"$BLER_{hyb}$")
-        aaa = list(map(lambda x: dii[x], data[pos]["labels"]))
+        xticks_labels = list(map(lambda x: xtick_translation[x], data[pos]["labels"]))
 
-        for i, nrtx in enumerate(["Failed", "No Re-TX",
-                                  "1 Re-TX", "2 Re-TX", "3 Re-TX"]):
+        legend_labels = ["Failed", "No Re-TX", "1 Re-TX", "2 Re-TX", "3 Re-TX"]
+        for i, nrtx in enumerate(legend_labels):
             values = np.array([x[i] for x in data[pos]["data"]])
             ax.bar(data[pos]["labels"], values, 0.69, label=nrtx,
                    bottom=bottom, color=colors[i])
             bottom += values
         ax.set_title(data[pos]["scene"].replace("S", "Scenario "))
         ax.set_xlabel("Algorithm")
-        ax.legend()
-        ax.set_xticks(ticks=range(4), labels=aaa, rotation=5, fontsize=9.2)
+        # ax.legend()
+        ax.set_xticks(ticks=range(4), labels=xticks_labels, rotation=5, fontsize=9.2)
 
-    fig.suptitle("Percentage of successful and failed blocks transmission")
+    # Legend (https://stackoverflow.com/questions/9834452/how-do-i-make-a-single-legend-for-many-subplots)
+    lines_labels = [ax.get_legend_handles_labels()]
+    lines, labels = [sum(lol, []) for lol in zip(*lines_labels)]
+    fig.legend(lines, labels, loc='upper center', ncol=len(legend_labels), bbox_to_anchor=(0.54, 0.95))
+
+    fig.suptitle("Percentage of successful and failed blocks transmission\n\n")
     fig.savefig(os.path.join(PATH, "Rtx-Bar-Par.png"), dpi=300)
     plt.close()
 
@@ -353,8 +358,8 @@ if __name__ == "__main__":
         raise ArgumentError(f"{RED}Incorrect number of arguments, given "
                             f"{len(sys.argv)} expected 1{CLEAR}")
 
-    t, d = get_array_for_violin()
-    violinGraphThr(t)
-    violinGraphDelay(d)
+    # t, d = get_array_for_violin()
+    # violinGraphThr(t)
+    # violinGraphDelay(d)
     stackedbar_graph_rtx()
-    violin_graph_bler()
+    # violin_graph_bler()
