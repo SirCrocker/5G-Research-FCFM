@@ -1041,7 +1041,7 @@ def graphSinrHeatmap():
     sns.heatmap(data=df.pivot_table(index="Y", columns="X", values="SINR"),
                 ax=ax, cmap="magma", vmin=df["SINR"].min(),
                 vmax=df['SINR'].max(), center=10, xticklabels=10, 
-                yticklabels=10)
+                yticklabels=10, cbar_kws={'label': 'SINR [dBm]'})
     ax.invert_yaxis()
     ax.set_xlabel("Distance [m]")
     ax.set_ylabel("Distance [m]")
