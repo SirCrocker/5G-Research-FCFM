@@ -183,14 +183,16 @@ def violinGraphThr(data):
             ax.text(p[0], p[1]*weight, p[1], color='black', ha='center',
                     bbox=dict(facecolor='white', alpha=0.4, boxstyle="round"))
 
+        location = "lower right"
         if pos == 1:
             ax.set_ylim([0, 65])
+            location = "best"
 
         ax.set_title(data[pos]["scene"].replace("S", "Scenario "))
         ax.set_xlabel("Algorithm")
-        ax.legend()
+        ax.legend(loc=location)
         ax.set_xticks(ticks=range(4), labels=aaa, rotation=5, fontsize=9.2)
-
+    
     fig.suptitle("Distribution of Throughput by Algorithm-Scenario")
     fig.savefig(os.path.join(PATH, "Thr-Violin-Par.png"), dpi=300)
     plt.close()
@@ -358,8 +360,8 @@ if __name__ == "__main__":
         raise ArgumentError(f"{RED}Incorrect number of arguments, given "
                             f"{len(sys.argv)} expected 1{CLEAR}")
 
-    # t, d = get_array_for_violin()
-    # violinGraphThr(t)
-    # violinGraphDelay(d)
+    t, d = get_array_for_violin()
+    violinGraphThr(t)
+    violinGraphDelay(d)
     stackedbar_graph_rtx()
-    # violin_graph_bler()
+    violin_graph_bler()
