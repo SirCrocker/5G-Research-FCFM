@@ -17,6 +17,7 @@
 #include <ns3/buildings-helper.h>
 #include <ns3/buildings-module.h>
 #include <ns3/hybrid-buildings-propagation-loss-model.h>
+#include "ns3/ai-module.h"
 
 /* Include systems libraries */
 #include <sys/types.h>
@@ -134,8 +135,9 @@ int main(int argc, char* argv[]) {
     double buildLy=10;  // Y Length
 
     std::string serverType = "Remote";  // Transport Protocol
-    std::string flowType = "UDP";       // Transport Protocol
-    std::string tcpTypeId = "TcpBbr";   // TCP Type
+    std::string flowType = "TCP";       // Transport Protocol
+    std::string tcpTypeId = "TcpRlTimeBased";   // TCP Type
+    double tcpEnvTimeStep = 0.1;
     double AppStartTime = 0.2;          // APP start time
 
     #pragma endregion Variables
@@ -183,7 +185,8 @@ int main(int argc, char* argv[]) {
     if (logging)
     {
         LogComponentEnableAll(LOG_PREFIX_TIME);
-        LogComponentEnable("NrAmc", LOG_DEBUG);
+        LogComponentEnable("tcp-rl-msg", LOG_DEBUG);
+        LogComponentEnable("tcp-rl-env-msg", LOG_DEBUG);
         // LogComponentEnable("NrAmc", LOG_ALL);
         // LogComponentEnable("BuildingsChannelConditionModel", LOG_ALL);
         // LogComponentEnable("NrBearerStatsConnector", LOG_ALL);
@@ -259,6 +262,10 @@ int main(int argc, char* argv[]) {
             Config::SetDefault("ns3::TcpBic::Beta", DoubleValue(1.5)); // Beta for multiplicative decrease. Default 0.8
             Config::SetDefault("ns3::TcpBic::HyStart", BooleanValue(false)); // Enable (true) or disable (false) hybrid slow start algorithm. Default true
             
+        }
+        else if (tcpTypeId == "TcpRlTimeBased")
+        {
+            Config::SetDefault("ns3::TcpTimeStepEnv::StepTime", TimeValue(Seconds(tcpEnvTimeStep)));
         }
 
     }
@@ -586,7 +593,7 @@ int main(int argc, char* argv[]) {
     std::ofstream mymcf;
     mymcf.open(logMFile);
     mymcf  << "Time\t" << "UE\t" << "x\t" << "y\t"  << "D0" << std::endl;
-    Simulator::Schedule(MilliSeconds(100), &CalculatePosition, &ueNodes, &gnbNodes, &mymcf);
+    // Simulator::Schedule(MilliSeconds(100), &CalculatePosition, &ueNodes, &gnbNodes, &mymcf);
 
     // 
     // generate graph.ini
