@@ -81,7 +81,7 @@ my_sim_seed = 0
 if args.sim_seed:
     my_sim_seed = args.sim_seed
 
-my_duration = 5
+my_duration = 25
 if args.duration:
     my_duration = args.duration
 

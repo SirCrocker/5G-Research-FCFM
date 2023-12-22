@@ -82,6 +82,13 @@ static void UdpServerMakeCallback(uint32_t nodeId);
 
 
 int main(int argc, char* argv[]) {
+    
+    int result = chdir("/home/diego/ns-3-dev/scratch/5G-Research-FCFM/out/test_rl_trees");
+    if (result != 0) {
+        std::cerr << "Error when changing the working directory. Error code: " << result << std::endl;
+        return result;
+    }
+
     #pragma region Variables
 
     double frequency = 27.3e9;      // central frequency 28e9
@@ -147,7 +154,7 @@ int main(int argc, char* argv[]) {
     std::string flowType = "TCP";       // Transport Protocol
     std::string tcpTypeId = "dou";   // TCP Type
     double tcpEnvTimeStep = 0.1;
-    double AppStartTime = 0.2;          // APP start time
+    double AppStartTime = 10;          // APP start time
 
     #pragma endregion Variables
 
