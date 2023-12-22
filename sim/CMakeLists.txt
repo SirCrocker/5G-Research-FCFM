@@ -20,12 +20,12 @@ build_exec(
       EXECNAME ns3ai_rltcp_msg
       EXECNAME_PREFIX scratch_
       SOURCE_FILES 
-            ../sim/simulation-main-dev.cc
+            # rl-tcp_original.cc
+            simulation-main-dev.cc
             tcp-rl.cc
             tcp-rl-env.cc
-            ../sim/cmdline-colors.h
-            ../sim/physical-scenarios.cc
-            ../sim/simulation-apps.cc
+            physical-scenarios.cc
+            simulation-apps.cc
       LIBRARIES_TO_LINK 
             ${libai}
             ${libnr}

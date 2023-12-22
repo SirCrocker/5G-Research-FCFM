@@ -81,7 +81,7 @@ my_sim_seed = 0
 if args.sim_seed:
     my_sim_seed = args.sim_seed
 
-my_duration = 2
+my_duration = 5
 if args.duration:
     my_duration = args.duration
 
@@ -100,17 +100,17 @@ stepIdx = 0
 
 ns3Settings = {
     'tcpTypeId': 'TcpRlTimeBased',
-    'simTime': my_duration}
+    'simTime': my_duration
+    # 'transport_prot': 'TcpRlTimeBased',
+    # 'duration': my_duration,
+    }
 exp = Experiment("ns3ai_rltcp_msg", "/home/diego/ns-3-dev", py_binding, handleFinish=True)
 msgInterface = exp.run(setting=ns3Settings, show_output=True)
 
 try:
-    print("wena mister antes del while")
     while True:
-        print("me meti al while y le hago al recv")
         # receive observation from C++
         msgInterface.PyRecvBegin()
-        print("recibi algo? xD")
         if msgInterface.PyGetFinished():
             print("Simulation ended")
             break
@@ -121,7 +121,6 @@ try:
         bytesInFlight = msgInterface.GetCpp2PyStruct().bytesInFlight
         socketId = msgInterface.GetCpp2PyStruct().socketUid
         msgInterface.PyRecvEnd()
-        print("PyRecvEnd")
         obs = [ssThresh, cWnd, segmentsAcked, segmentSize, bytesInFlight]
         if args.show_log:
             print("Recv obs:", obs)
@@ -136,12 +135,11 @@ try:
         new_ssThresh = act[1]
 
         # send action to C++
-        print("voy a mandar webonadas")
         msgInterface.PySendBegin()
         msgInterface.GetPy2CppStruct().new_cWnd = new_cWnd
         msgInterface.GetPy2CppStruct().new_ssThresh = new_ssThresh
         msgInterface.PySendEnd()
-        print("ya mandé webonadas")
+
 
         if args.show_log:
             print("Step:", stepIdx)

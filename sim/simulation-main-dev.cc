@@ -18,8 +18,17 @@
 #include <ns3/buildings-module.h>
 #include <ns3/hybrid-buildings-propagation-loss-model.h>
 #include "ns3/ai-module.h"
+#include "ns3/enum.h"
+#include "ns3/error-model.h"
+#include "ns3/event-id.h"
+#include "ns3/flow-monitor-helper.h"
+#include "ns3/point-to-point-layout-module.h"
+#include "ns3/point-to-point-module.h"
+#include "ns3/tcp-header.h"
+#include "ns3/traffic-control-module.h"
 
 /* Include systems libraries */
+
 #include <sys/types.h>
 #include <unistd.h>
 
@@ -136,7 +145,7 @@ int main(int argc, char* argv[]) {
 
     std::string serverType = "Remote";  // Transport Protocol
     std::string flowType = "TCP";       // Transport Protocol
-    std::string tcpTypeId = "TcpRlTimeBased";   // TCP Type
+    std::string tcpTypeId = "dou";   // TCP Type
     double tcpEnvTimeStep = 0.1;
     double AppStartTime = 0.2;          // APP start time
 
@@ -233,18 +242,19 @@ int main(int argc, char* argv[]) {
     queueDisc = std::string("ns3::") + queueDisc;
 
     if (flowType =="TCP"){
+        // Config::SetDefault("ns3::TcpL4Protocol::SocketType", TypeIdValue(TypeId::LookupByName(tcpTypeId)));
         Config::SetDefault("ns3::TcpL4Protocol::SocketType", StringValue("ns3::" + tcpTypeId));
-        Config::SetDefault("ns3::TcpSocket::SndBufSize", UintegerValue(4194304)); // TcpSocket maximum transmit buffer size (bytes). 4194304 = 4MB
-        Config::SetDefault("ns3::TcpSocket::RcvBufSize", UintegerValue(6291456)); // TcpSocket maximum receive buffer size (bytes). 6291456 = 6MB
-        Config::SetDefault("ns3::TcpSocket::InitialCwnd", UintegerValue(10)); // TCP initial congestion window size (segments). RFC 5681 = 10
-        Config::SetDefault("ns3::TcpSocket::SegmentSize", UintegerValue(SEGMENT_SIZE)); // TCP maximum segment size in bytes (may be adjusted based on MTU discovery).
-        Config::SetDefault("ns3::TcpSocket::TcpNoDelay", BooleanValue(false)); // Set to true to disable Nagle's algorithm
+        // Config::SetDefault("ns3::TcpSocket::SndBufSize", UintegerValue(4194304)); // TcpSocket maximum transmit buffer size (bytes). 4194304 = 4MB
+        // Config::SetDefault("ns3::TcpSocket::RcvBufSize", UintegerValue(6291456)); // TcpSocket maximum receive buffer size (bytes). 6291456 = 6MB
+        // Config::SetDefault("ns3::TcpSocket::InitialCwnd", UintegerValue(10)); // TCP initial congestion window size (segments). RFC 5681 = 10
+        // Config::SetDefault("ns3::TcpSocket::SegmentSize", UintegerValue(SEGMENT_SIZE)); // TCP maximum segment size in bytes (may be adjusted based on MTU discovery).
+        // Config::SetDefault("ns3::TcpSocket::TcpNoDelay", BooleanValue(false)); // Set to true to disable Nagle's algorithm
 
-        // Config::SetDefault("ns3::TcpSocketBase::MinRto", TimeValue (MilliSeconds (200)));
-        Config::SetDefault("ns3::TcpSocket::DelAckCount", UintegerValue(delAckCount));  // Number of packets to wait before sending a TCP ack
-        Config::SetDefault("ns3::TcpSocket::DelAckTimeout", TimeValue (Seconds (.2))); // Timeout value for TCP delayed acks, in seconds. default 0.2 sec
-        Config::SetDefault("ns3::TcpSocket::DataRetries", UintegerValue(6)); // Number of data retransmission attempts. Default 6
-        Config::SetDefault("ns3::TcpSocket::PersistTimeout", TimeValue (Seconds (2))); // Number of data retransmission attempts. Default 6
+        // // Config::SetDefault("ns3::TcpSocketBase::MinRto", TimeValue (MilliSeconds (200)));
+        // Config::SetDefault("ns3::TcpSocket::DelAckCount", UintegerValue(delAckCount));  // Number of packets to wait before sending a TCP ack
+        // Config::SetDefault("ns3::TcpSocket::DelAckTimeout", TimeValue (Seconds (.2))); // Timeout value for TCP delayed acks, in seconds. default 0.2 sec
+        // Config::SetDefault("ns3::TcpSocket::DataRetries", UintegerValue(6)); // Number of data retransmission attempts. Default 6
+        // Config::SetDefault("ns3::TcpSocket::PersistTimeout", TimeValue (Seconds (2))); // Number of data retransmission attempts. Default 6
 
         // Config::Set ("/NodeList/*/DeviceList/*/TxQueue/MaxSize",  QueueSizeValue(QueueSize ("100p")));
         // Config::Set ("/NodeList/*/DeviceList/*/RxQueue/MaxSize",  QueueSizeValue(QueueSize ("100p")));
@@ -265,6 +275,8 @@ int main(int argc, char* argv[]) {
         }
         else if (tcpTypeId == "TcpRlTimeBased")
         {
+            tcpTypeId = std::string("ns3::") + tcpTypeId;
+            Config::SetDefault("ns3::TcpL4Protocol::SocketType", TypeIdValue(TypeId::LookupByName(tcpTypeId)));
             Config::SetDefault("ns3::TcpTimeStepEnv::StepTime", TimeValue(Seconds(tcpEnvTimeStep)));
         }
 
@@ -593,7 +605,7 @@ int main(int argc, char* argv[]) {
     std::ofstream mymcf;
     mymcf.open(logMFile);
     mymcf  << "Time\t" << "UE\t" << "x\t" << "y\t"  << "D0" << std::endl;
-    // Simulator::Schedule(MilliSeconds(100), &CalculatePosition, &ueNodes, &gnbNodes, &mymcf);
+    Simulator::Schedule(MilliSeconds(100), &CalculatePosition, &ueNodes, &gnbNodes, &mymcf);
 
     // 
     // generate graph.ini
